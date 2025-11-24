@@ -1,0 +1,2394 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>今天吃什么？随机菜单生成器</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --bg-soft: #111827;
+      --card: #020617;
+      --accent: #22c55e;
+      --accent-soft: rgba(34, 197, 94, 0.15);
+      --accent-strong: #4ade80;
+      --text-main: #e5e7eb;
+      --text-muted: #9ca3af;
+      --border-subtle: #1f2937;
+      --danger: #f97373;
+      --radius-xl: 18px;
+      --shadow-soft: 0 18px 45px rgba(15, 23, 42, 0.8);
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC",
+        "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+      background: radial-gradient(circle at top left, #1f2937 0, #020617 45%, #020617 100%);
+      color: var(--text-main);
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      padding: 20px 12px 32px;
+    }
+
+    .app-shell {
+      width: 100%;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    .app-header {
+      text-align: left;
+      margin-bottom: 18px;
+    }
+
+    .app-header h1 {
+      margin: 0 0 6px;
+      font-size: 2rem;
+      letter-spacing: 0.03em;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .app-header h1 span.emoji {
+      font-size: 1.7rem;
+    }
+
+    .app-header p {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .card {
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.96), rgba(2, 6, 23, 0.98));
+      border-radius: var(--radius-xl);
+      border: 1px solid rgba(31, 41, 55, 0.9);
+      box-shadow: var(--shadow-soft);
+      padding: 18px 18px 16px;
+      backdrop-filter: blur(16px);
+    }
+
+    .filters-card {
+      margin-bottom: 18px;
+    }
+
+    .card h2 {
+      margin: 0 0 12px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      background: rgba(15, 118, 110, 0.15);
+      color: #a5f3fc;
+      border: 1px solid rgba(45, 212, 191, 0.4);
+    }
+
+    .filters-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .filter-group label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .filter-group select {
+      width: 100%;
+      padding: 7px 9px;
+      border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+      background: rgba(15, 23, 42, 0.95);
+      color: var(--text-main);
+      font-size: 0.85rem;
+      outline: none;
+      appearance: none;
+      background-image: linear-gradient(45deg, transparent 50%, var(--accent-strong) 50%),
+        linear-gradient(135deg, var(--accent-strong) 50%, transparent 50%);
+      background-position: calc(100% - 15px) 11px, calc(100% - 10px) 11px;
+      background-size: 6px 6px, 6px 6px;
+      background-repeat: no-repeat;
+    }
+
+    .filter-group select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.4);
+    }
+
+    .actions-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .btn {
+      border-radius: 999px;
+      border: 1px solid transparent;
+      padding: 7px 14px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      transition: all 0.18s ease;
+    }
+
+    .btn.primary {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: #022c22;
+      box-shadow: 0 10px 25px rgba(16, 185, 129, 0.45);
+    }
+
+    .btn.primary:hover {
+      filter: brightness(1.05);
+      transform: translateY(-1px);
+      box-shadow: 0 14px 32px rgba(16, 185, 129, 0.6);
+    }
+
+    .btn.ghost {
+      background: rgba(15, 23, 42, 0.6);
+      color: var(--text-main);
+      border-color: rgba(55, 65, 81, 0.9);
+    }
+
+    .btn.ghost:hover {
+      border-color: var(--accent);
+      background: rgba(21, 128, 61, 0.12);
+    }
+
+    .btn.subtle {
+      background: transparent;
+      color: var(--text-muted);
+      border-color: transparent;
+      padding-inline: 10px;
+    }
+
+    .btn.subtle:hover {
+      color: var(--accent-strong);
+      background: rgba(15, 23, 42, 0.8);
+    }
+
+    .btn span.icon {
+      font-size: 1rem;
+    }
+
+    .hint-text {
+      margin: 0;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .menu-card {
+      margin-bottom: 14px;
+    }
+
+    .menu-header-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 6px;
+      flex-wrap: wrap;
+    }
+
+    .menu-meta {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .menu-meta strong {
+      color: var(--accent-strong);
+      font-weight: 600;
+    }
+
+    .menu-result {
+      margin-top: 4px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .menu-result.empty {
+      display: block;
+    }
+
+    .empty p {
+      margin: 6px 0 2px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .recipe-card {
+      border-radius: 16px;
+      border: 1px solid rgba(31, 41, 55, 0.95);
+      background: radial-gradient(circle at top left, rgba(34, 197, 94, 0.12), rgba(15, 23, 42, 0.98));
+      padding: 10px 10px 9px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 120px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .recipe-role {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent-strong);
+      margin-bottom: 4px;
+    }
+
+    .recipe-name {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+      line-height: 1.25;
+    }
+
+    .recipe-meta {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .tag-pill {
+      font-size: 0.7rem;
+      padding: 2px 7px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      color: #e5e7eb;
+      background: rgba(15, 23, 42, 0.9);
+      backdrop-filter: blur(4px);
+    }
+
+    .tag-pill.goal {
+      border-color: rgba(34, 197, 94, 0.8);
+      color: #bbf7d0;
+      background: rgba(22, 163, 74, 0.25);
+    }
+
+    .tag-pill.spicy {
+      border-color: rgba(239, 68, 68, 0.9);
+      color: #fecaca;
+      background: rgba(127, 29, 29, 0.4);
+    }
+
+    .tag-pill.light {
+      border-color: rgba(45, 212, 191, 0.8);
+      color: #a5f3fc;
+      background: rgba(15, 118, 110, 0.4);
+    }
+
+    .recipe-glow {
+      position: absolute;
+      inset: -40%;
+      background: radial-gradient(circle at top right, rgba(34, 197, 94, 0.12), transparent 55%);
+      opacity: 0.9;
+      pointer-events: none;
+    }
+
+    .app-footer {
+      text-align: center;
+      font-size: 0.7rem;
+      color: #6b7280;
+      margin-top: 4px;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding-inline: 10px;
+      }
+      .filters-grid {
+        grid-template-columns: 1fr;
+      }
+      .menu-result {
+        grid-template-columns: 1fr;
+      }
+      .actions-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .btn {
+        justify-content: center;
+      }
+    }
+
+    @media (min-width: 769px) and (max-width: 1024px) {
+      .menu-result {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <h1><span class="emoji">🥗</span> 今天吃什么？</h1>
+      <p>给选择困难症女朋友准备的 · 随机但靠谱的每日菜单小助手</p>
+    </header>
+
+    <section class="card filters-card">
+      <div class="menu-header-row">
+        <h2>先说说大方向</h2>
+        <span class="badge">共内置 134 道菜</span>
+      </div>
+      <div class="filters-grid">
+        <div class="filter-group">
+          <label for="goalFilter">饮食目标</label>
+          <select id="goalFilter">
+            <option value="">随便，先吃饱</option>
+            <option value="diet">减脂轻食</option>
+            <option value="balanced">日常均衡</option>
+            <option value="protein">高蛋白 / 健身</option>
+            <option value="comfort">安慰解馋</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="cuisineFilter">想吃哪一挂</label>
+          <select id="cuisineFilter">
+            <option value="">都可以</option>
+            <option value="cn_home">中餐 · 家常</option>
+            <option value="cn_sichuan">中餐 · 川湘辣</option>
+            <option value="cn_cantonese">粤菜 / 港式</option>
+            <option value="japanese">日料</option>
+            <option value="korean">韩式</option>
+            <option value="western">西餐 / 意面沙拉</option>
+            <option value="thai">东南亚 / 泰式</option>
+            <option value="salad">沙拉 / 轻食碗</option>
+            <option value="dessert">早餐 / 小甜点</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="vegFilter">荤素偏好</label>
+          <select id="vegFilter">
+            <option value="any">无所谓，搭配就好</option>
+            <option value="veggie">多吃菜 / 素一点</option>
+            <option value="meat">多吃肉 / 高蛋白</option>
+          </select>
+        </div>
+      </div>
+      <div class="actions-row">
+        <button id="btnGenerate" class="btn primary">
+          <span class="icon">✨</span><span>生成今日菜单</span>
+        </button>
+        <button id="btnShuffle" class="btn ghost">
+          <span class="icon">🎲</span><span>换一批</span>
+        </button>
+        <button id="btnSuperRandom" class="btn subtle">
+          <span class="icon">🙈</span><span>我懒得选，完全随机</span>
+        </button>
+      </div>
+      <p class="hint-text">小提示：什么都不选也可以，直接点“生成今日菜单”或“完全随机”。</p>
+    </section>
+
+    <section class="card menu-card">
+      <div class="menu-header-row">
+        <h2>为你选好的菜单</h2>
+        <div class="menu-meta" id="menuMeta"></div>
+      </div>
+      <div id="menuResult" class="menu-result empty">
+        <p>👆 先在上面选一选，或者直接点“生成今日菜单”。</p>
+        <p>系统会聪明地帮你搭配 1 道主菜 + 1 道配菜 / 沙拉 + 1 碗汤 / 饮品。</p>
+      </div>
+    </section>
+
+    <footer class="app-footer">
+      <p>把这个网页离线保存到手机主屏幕，就成了随身“吃饭决策机”。</p>
+    </footer>
+  </div>
+
+  <script>
+    // 菜谱数据
+    const RECIPES = [
+  {
+    "id": 1,
+    "name": "番茄炒蛋",
+    "cuisine": "cn_home",
+    "type": "main",
+    "goals": [
+      "balanced",
+      "diet"
+    ],
+    "tags": [
+      "quick",
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 2,
+    "name": "青椒土豆丝",
+    "cuisine": "cn_home",
+    "type": "main",
+    "goals": [
+      "balanced",
+      "diet"
+    ],
+    "tags": [
+      "quick",
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 3,
+    "name": "香干芹菜炒肉",
+    "cuisine": "cn_home",
+    "type": "main",
+    "goals": [
+      "balanced"
+    ],
+    "tags": [
+      "quick"
+    ]
+  },
+  {
+    "id": 4,
+    "name": "木耳炒肉片",
+    "cuisine": "cn_home",
+    "type": "main",
+    "goals": [
+      "balanced"
+    ],
+    "tags": [
+      "quick"
+    ]
+  },
+  {
+    "id": 5,
+    "name": "蒜苗回锅肉",
+    "cuisine": "cn_home",
+    "type": "main",
+    "goals": [
+      "comfort"
+    ],
+    "tags": [
+      "spicy"
+    ]
+  },
+  {
+    "id": 6,
+    "name": "红烧茄子",
+    "cuisine": "cn_home",
+    "type": "main",
+    "goals": [
+      "balanced",
+      "comfort"
+    ],
+    "tags": [
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 7,
+    "name": "家常豆腐",
+    "cuisine": "cn_home",
+    "type": "main",
+    "goals": [
+      "balanced",
+      "diet"
+    ],
+    "tags": [
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 8,
+    "name": "糖醋里脊",
+    "cuisine": "cn_home",
+    "type": "main",
+    "goals": [
+      "comfort"
+    ],
+    "tags": []
+  },
+  {
+    "id": 9,
+    "name": "葱爆牛肉",
+    "cuisine": "cn_home",
+    "type": "main",
+    "goals": [
+      "protein",
+      "comfort"
+    ],
+    "tags": [
+      "high_protein"
+    ]
+  },
+  {
+    "id": 10,
+    "name": "鱼香肉丝",
+    "cuisine": "cn_home",
+    "type": "main",
+    "goals": [
+      "balanced",
+      "comfort"
+    ],
+    "tags": [
+      "spicy"
+    ]
+  },
+  {
+    "id": 11,
+    "name": "西葫芦鸡蛋饼",
+    "cuisine": "cn_home",
+    "type": "main",
+    "goals": [
+      "balanced",
+      "diet"
+    ],
+    "tags": [
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 12,
+    "name": "鸡丁彩椒盖饭",
+    "cuisine": "cn_home",
+    "type": "main",
+    "goals": [
+      "balanced"
+    ],
+    "tags": [
+      "quick"
+    ]
+  },
+  {
+    "id": 13,
+    "name": "香菇滑鸡煲",
+    "cuisine": "cn_home",
+    "type": "main",
+    "goals": [
+      "balanced",
+      "protein"
+    ],
+    "tags": [
+      "high_protein"
+    ]
+  },
+  {
+    "id": 14,
+    "name": "清蒸鲈鱼",
+    "cuisine": "cn_home",
+    "type": "main",
+    "goals": [
+      "diet",
+      "protein"
+    ],
+    "tags": [
+      "seafood",
+      "low_carb"
+    ]
+  },
+  {
+    "id": 15,
+    "name": "豉汁蒸排骨",
+    "cuisine": "cn_home",
+    "type": "main",
+    "goals": [
+      "balanced",
+      "comfort"
+    ],
+    "tags": []
+  },
+  {
+    "id": 16,
+    "name": "宫保鸡丁",
+    "cuisine": "cn_sichuan",
+    "type": "main",
+    "goals": [
+      "balanced",
+      "comfort"
+    ],
+    "tags": [
+      "spicy"
+    ]
+  },
+  {
+    "id": 17,
+    "name": "水煮牛肉",
+    "cuisine": "cn_sichuan",
+    "type": "main",
+    "goals": [
+      "comfort"
+    ],
+    "tags": [
+      "spicy"
+    ]
+  },
+  {
+    "id": 18,
+    "name": "麻婆豆腐",
+    "cuisine": "cn_sichuan",
+    "type": "main",
+    "goals": [
+      "balanced"
+    ],
+    "tags": [
+      "spicy",
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 19,
+    "name": "酸菜鱼片",
+    "cuisine": "cn_sichuan",
+    "type": "main",
+    "goals": [
+      "balanced",
+      "protein"
+    ],
+    "tags": [
+      "spicy",
+      "seafood"
+    ]
+  },
+  {
+    "id": 20,
+    "name": "香辣虾",
+    "cuisine": "cn_sichuan",
+    "type": "main",
+    "goals": [
+      "comfort",
+      "protein"
+    ],
+    "tags": [
+      "spicy",
+      "seafood"
+    ]
+  },
+  {
+    "id": 21,
+    "name": "辣子鸡丁",
+    "cuisine": "cn_sichuan",
+    "type": "main",
+    "goals": [
+      "comfort"
+    ],
+    "tags": [
+      "spicy"
+    ]
+  },
+  {
+    "id": 22,
+    "name": "泡椒田鸡",
+    "cuisine": "cn_sichuan",
+    "type": "main",
+    "goals": [
+      "comfort"
+    ],
+    "tags": [
+      "spicy"
+    ]
+  },
+  {
+    "id": 23,
+    "name": "鱼香茄子",
+    "cuisine": "cn_sichuan",
+    "type": "main",
+    "goals": [
+      "balanced",
+      "comfort"
+    ],
+    "tags": [
+      "spicy",
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 24,
+    "name": "回锅肉片",
+    "cuisine": "cn_sichuan",
+    "type": "main",
+    "goals": [
+      "comfort"
+    ],
+    "tags": [
+      "spicy"
+    ]
+  },
+  {
+    "id": 25,
+    "name": "口水鸡",
+    "cuisine": "cn_sichuan",
+    "type": "main",
+    "goals": [
+      "protein",
+      "diet"
+    ],
+    "tags": [
+      "spicy",
+      "high_protein"
+    ]
+  },
+  {
+    "id": 26,
+    "name": "清蒸多宝鱼",
+    "cuisine": "cn_cantonese",
+    "type": "main",
+    "goals": [
+      "diet",
+      "protein"
+    ],
+    "tags": [
+      "seafood",
+      "mild"
+    ]
+  },
+  {
+    "id": 27,
+    "name": "姜葱炒花蛤",
+    "cuisine": "cn_cantonese",
+    "type": "main",
+    "goals": [
+      "balanced"
+    ],
+    "tags": [
+      "seafood"
+    ]
+  },
+  {
+    "id": 28,
+    "name": "豉油皇鸡腿",
+    "cuisine": "cn_cantonese",
+    "type": "main",
+    "goals": [
+      "balanced"
+    ],
+    "tags": []
+  },
+  {
+    "id": 29,
+    "name": "广式叉烧",
+    "cuisine": "cn_cantonese",
+    "type": "main",
+    "goals": [
+      "comfort"
+    ],
+    "tags": []
+  },
+  {
+    "id": 30,
+    "name": "豉汁蒸凤爪",
+    "cuisine": "cn_cantonese",
+    "type": "main",
+    "goals": [
+      "comfort"
+    ],
+    "tags": []
+  },
+  {
+    "id": 31,
+    "name": "豉油皇炒面",
+    "cuisine": "cn_cantonese",
+    "type": "main",
+    "goals": [
+      "comfort"
+    ],
+    "tags": [
+      "noodle"
+    ]
+  },
+  {
+    "id": 32,
+    "name": "滑蛋虾仁",
+    "cuisine": "cn_cantonese",
+    "type": "main",
+    "goals": [
+      "diet",
+      "protein"
+    ],
+    "tags": [
+      "seafood",
+      "high_protein"
+    ]
+  },
+  {
+    "id": 33,
+    "name": "柱候牛腩煲",
+    "cuisine": "cn_cantonese",
+    "type": "main",
+    "goals": [
+      "comfort"
+    ],
+    "tags": []
+  },
+  {
+    "id": 34,
+    "name": "照烧鸡腿饭",
+    "cuisine": "japanese",
+    "type": "main",
+    "goals": [
+      "balanced",
+      "protein"
+    ],
+    "tags": [
+      "high_protein"
+    ]
+  },
+  {
+    "id": 35,
+    "name": "三文鱼刺身饭",
+    "cuisine": "japanese",
+    "type": "main",
+    "goals": [
+      "diet",
+      "protein"
+    ],
+    "tags": [
+      "seafood",
+      "low_carb"
+    ]
+  },
+  {
+    "id": 36,
+    "name": "鳗鱼蒲烧饭",
+    "cuisine": "japanese",
+    "type": "main",
+    "goals": [
+      "comfort"
+    ],
+    "tags": [
+      "seafood"
+    ]
+  },
+  {
+    "id": 37,
+    "name": "日式咖喱牛肉饭",
+    "cuisine": "japanese",
+    "type": "main",
+    "goals": [
+      "comfort"
+    ],
+    "tags": []
+  },
+  {
+    "id": 38,
+    "name": "亲子丼（鸡肉鸡蛋盖饭）",
+    "cuisine": "japanese",
+    "type": "main",
+    "goals": [
+      "balanced",
+      "protein"
+    ],
+    "tags": [
+      "high_protein"
+    ]
+  },
+  {
+    "id": 39,
+    "name": "味噌烤鱼定食",
+    "cuisine": "japanese",
+    "type": "main",
+    "goals": [
+      "diet",
+      "protein"
+    ],
+    "tags": [
+      "seafood"
+    ]
+  },
+  {
+    "id": 40,
+    "name": "鸡肉冷荞麦面",
+    "cuisine": "japanese",
+    "type": "main",
+    "goals": [
+      "diet"
+    ],
+    "tags": [
+      "noodle",
+      "light"
+    ]
+  },
+  {
+    "id": 41,
+    "name": "金枪鱼沙拉饭",
+    "cuisine": "japanese",
+    "type": "main",
+    "goals": [
+      "diet"
+    ],
+    "tags": [
+      "seafood",
+      "light"
+    ]
+  },
+  {
+    "id": 42,
+    "name": "牛肉寿喜锅",
+    "cuisine": "japanese",
+    "type": "main",
+    "goals": [
+      "comfort",
+      "protein"
+    ],
+    "tags": []
+  },
+  {
+    "id": 43,
+    "name": "日式炸猪排饭",
+    "cuisine": "japanese",
+    "type": "main",
+    "goals": [
+      "comfort"
+    ],
+    "tags": []
+  },
+  {
+    "id": 44,
+    "name": "石锅拌饭",
+    "cuisine": "korean",
+    "type": "main",
+    "goals": [
+      "balanced"
+    ],
+    "tags": [
+      "spicy"
+    ]
+  },
+  {
+    "id": 45,
+    "name": "部队火锅",
+    "cuisine": "korean",
+    "type": "main",
+    "goals": [
+      "comfort"
+    ],
+    "tags": [
+      "spicy"
+    ]
+  },
+  {
+    "id": 46,
+    "name": "韩式烤五花肉套餐",
+    "cuisine": "korean",
+    "type": "main",
+    "goals": [
+      "comfort",
+      "protein"
+    ],
+    "tags": [
+      "high_protein"
+    ]
+  },
+  {
+    "id": 47,
+    "name": "泡菜豆腐锅",
+    "cuisine": "korean",
+    "type": "main",
+    "goals": [
+      "diet"
+    ],
+    "tags": [
+      "spicy",
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 48,
+    "name": "辣炒鸡爪年糕",
+    "cuisine": "korean",
+    "type": "main",
+    "goals": [
+      "comfort"
+    ],
+    "tags": [
+      "spicy"
+    ]
+  },
+  {
+    "id": 49,
+    "name": "韩式肥牛拌饭",
+    "cuisine": "korean",
+    "type": "main",
+    "goals": [
+      "balanced"
+    ],
+    "tags": []
+  },
+  {
+    "id": 50,
+    "name": "海鲜葱饼",
+    "cuisine": "korean",
+    "type": "main",
+    "goals": [
+      "comfort"
+    ],
+    "tags": [
+      "seafood"
+    ]
+  },
+  {
+    "id": 51,
+    "name": "辣白菜炒五花",
+    "cuisine": "korean",
+    "type": "main",
+    "goals": [
+      "comfort"
+    ],
+    "tags": [
+      "spicy"
+    ]
+  },
+  {
+    "id": 52,
+    "name": "迷迭香烤鸡胸配蔬菜",
+    "cuisine": "western",
+    "type": "main",
+    "goals": [
+      "diet",
+      "protein"
+    ],
+    "tags": [
+      "high_protein",
+      "low_carb"
+    ]
+  },
+  {
+    "id": 53,
+    "name": "黑椒牛排配芦笋",
+    "cuisine": "western",
+    "type": "main",
+    "goals": [
+      "protein"
+    ],
+    "tags": [
+      "high_protein",
+      "low_carb"
+    ]
+  },
+  {
+    "id": 54,
+    "name": "奶油培根意面",
+    "cuisine": "western",
+    "type": "main",
+    "goals": [
+      "comfort"
+    ],
+    "tags": [
+      "noodle"
+    ]
+  },
+  {
+    "id": 55,
+    "name": "番茄海鲜意大利面",
+    "cuisine": "western",
+    "type": "main",
+    "goals": [
+      "balanced"
+    ],
+    "tags": [
+      "seafood",
+      "noodle"
+    ]
+  },
+  {
+    "id": 56,
+    "name": "罗勒青酱鸡胸意面",
+    "cuisine": "western",
+    "type": "main",
+    "goals": [
+      "balanced",
+      "protein"
+    ],
+    "tags": [
+      "high_protein",
+      "noodle"
+    ]
+  },
+  {
+    "id": 57,
+    "name": "烤三文鱼配藜麦沙拉",
+    "cuisine": "western",
+    "type": "main",
+    "goals": [
+      "diet",
+      "protein"
+    ],
+    "tags": [
+      "seafood",
+      "light"
+    ]
+  },
+  {
+    "id": 58,
+    "name": "牛油果鸡蛋吐司",
+    "cuisine": "western",
+    "type": "main",
+    "goals": [
+      "diet",
+      "balanced"
+    ],
+    "tags": [
+      "vegetarian",
+      "breakfast"
+    ]
+  },
+  {
+    "id": 59,
+    "name": "法式焗蔬菜配鸡腿",
+    "cuisine": "western",
+    "type": "main",
+    "goals": [
+      "balanced"
+    ],
+    "tags": []
+  },
+  {
+    "id": 60,
+    "name": "墨西哥鸡肉卷饼",
+    "cuisine": "western",
+    "type": "main",
+    "goals": [
+      "balanced"
+    ],
+    "tags": [
+      "handheld"
+    ]
+  },
+  {
+    "id": 61,
+    "name": "牛肉汉堡配沙拉",
+    "cuisine": "western",
+    "type": "main",
+    "goals": [
+      "comfort"
+    ],
+    "tags": []
+  },
+  {
+    "id": 62,
+    "name": "鸡胸肉凯撒沙拉",
+    "cuisine": "salad",
+    "type": "salad",
+    "goals": [
+      "diet",
+      "protein"
+    ],
+    "tags": [
+      "salad",
+      "high_protein"
+    ]
+  },
+  {
+    "id": 63,
+    "name": "藜麦牛油果鸡肉碗",
+    "cuisine": "salad",
+    "type": "salad",
+    "goals": [
+      "diet",
+      "protein"
+    ],
+    "tags": [
+      "salad",
+      "high_protein",
+      "low_carb"
+    ]
+  },
+  {
+    "id": 64,
+    "name": "三文鱼牛油果拌饭",
+    "cuisine": "salad",
+    "type": "salad",
+    "goals": [
+      "diet"
+    ],
+    "tags": [
+      "seafood",
+      "salad"
+    ]
+  },
+  {
+    "id": 65,
+    "name": "地中海鹰嘴豆沙拉",
+    "cuisine": "salad",
+    "type": "salad",
+    "goals": [
+      "diet",
+      "balanced"
+    ],
+    "tags": [
+      "salad",
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 66,
+    "name": "烤南瓜芝麻菜沙拉",
+    "cuisine": "salad",
+    "type": "salad",
+    "goals": [
+      "diet"
+    ],
+    "tags": [
+      "salad",
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 67,
+    "name": "牛肉菠菜能量碗",
+    "cuisine": "salad",
+    "type": "salad",
+    "goals": [
+      "protein"
+    ],
+    "tags": [
+      "high_protein"
+    ]
+  },
+  {
+    "id": 68,
+    "name": "冷荞麦面沙拉碗",
+    "cuisine": "salad",
+    "type": "salad",
+    "goals": [
+      "diet"
+    ],
+    "tags": [
+      "salad",
+      "noodle"
+    ]
+  },
+  {
+    "id": 69,
+    "name": "香橙鸡肉杂粮碗",
+    "cuisine": "salad",
+    "type": "salad",
+    "goals": [
+      "balanced",
+      "protein"
+    ],
+    "tags": [
+      "salad"
+    ]
+  },
+  {
+    "id": 70,
+    "name": "豆腐蔬菜佛系碗",
+    "cuisine": "salad",
+    "type": "salad",
+    "goals": [
+      "diet"
+    ],
+    "tags": [
+      "salad",
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 71,
+    "name": "虾仁芒果沙拉",
+    "cuisine": "salad",
+    "type": "salad",
+    "goals": [
+      "diet"
+    ],
+    "tags": [
+      "salad",
+      "seafood"
+    ]
+  },
+  {
+    "id": 72,
+    "name": "冬阴功海鲜汤面",
+    "cuisine": "thai",
+    "type": "main",
+    "goals": [
+      "comfort"
+    ],
+    "tags": [
+      "spicy",
+      "seafood"
+    ]
+  },
+  {
+    "id": 73,
+    "name": "泰式罗勒炒鸡肉配饭",
+    "cuisine": "thai",
+    "type": "main",
+    "goals": [
+      "balanced"
+    ],
+    "tags": [
+      "spicy"
+    ]
+  },
+  {
+    "id": 74,
+    "name": "绿咖喱鸡配糙米饭",
+    "cuisine": "thai",
+    "type": "main",
+    "goals": [
+      "balanced"
+    ],
+    "tags": [
+      "spicy"
+    ]
+  },
+  {
+    "id": 75,
+    "name": "泰式牛肉沙拉",
+    "cuisine": "thai",
+    "type": "main",
+    "goals": [
+      "diet",
+      "protein"
+    ],
+    "tags": [
+      "spicy",
+      "salad"
+    ]
+  },
+  {
+    "id": 76,
+    "name": "椰汁咖喱虾配米粉",
+    "cuisine": "thai",
+    "type": "main",
+    "goals": [
+      "comfort"
+    ],
+    "tags": [
+      "seafood"
+    ]
+  },
+  {
+    "id": 77,
+    "name": "菠萝海鲜炒饭",
+    "cuisine": "thai",
+    "type": "main",
+    "goals": [
+      "comfort"
+    ],
+    "tags": [
+      "seafood"
+    ]
+  },
+  {
+    "id": 78,
+    "name": "越南牛肉河粉",
+    "cuisine": "thai",
+    "type": "main",
+    "goals": [
+      "balanced",
+      "comfort"
+    ],
+    "tags": [
+      "soup",
+      "noodle"
+    ]
+  },
+  {
+    "id": 79,
+    "name": "凉拌黄瓜",
+    "cuisine": "cn_home",
+    "type": "side",
+    "goals": [
+      "diet",
+      "balanced"
+    ],
+    "tags": [
+      "vegetarian",
+      "quick"
+    ]
+  },
+  {
+    "id": 80,
+    "name": "蒜蓉生菜",
+    "cuisine": "cn_home",
+    "type": "side",
+    "goals": [
+      "diet",
+      "balanced"
+    ],
+    "tags": [
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 81,
+    "name": "蚝油西兰花",
+    "cuisine": "cn_home",
+    "type": "side",
+    "goals": [
+      "diet",
+      "balanced"
+    ],
+    "tags": [
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 82,
+    "name": "凉拌木耳",
+    "cuisine": "cn_home",
+    "type": "side",
+    "goals": [
+      "diet"
+    ],
+    "tags": [
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 83,
+    "name": "凉拌豆腐皮",
+    "cuisine": "cn_home",
+    "type": "side",
+    "goals": [
+      "diet"
+    ],
+    "tags": [
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 84,
+    "name": "手撕包菜",
+    "cuisine": "cn_home",
+    "type": "side",
+    "goals": [
+      "balanced"
+    ],
+    "tags": [
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 85,
+    "name": "香干马兰头",
+    "cuisine": "cn_home",
+    "type": "side",
+    "goals": [
+      "diet"
+    ],
+    "tags": [
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 86,
+    "name": "蒜蓉菠菜",
+    "cuisine": "cn_home",
+    "type": "side",
+    "goals": [
+      "diet"
+    ],
+    "tags": [
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 87,
+    "name": "清炒时蔬拼盘",
+    "cuisine": "cn_home",
+    "type": "side",
+    "goals": [
+      "diet"
+    ],
+    "tags": [
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 88,
+    "name": "凉拌番茄洋葱",
+    "cuisine": "cn_home",
+    "type": "side",
+    "goals": [
+      "diet"
+    ],
+    "tags": [
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 89,
+    "name": "凉拌海带丝",
+    "cuisine": "cn_home",
+    "type": "side",
+    "goals": [
+      "diet"
+    ],
+    "tags": [
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 90,
+    "name": "香菇青菜",
+    "cuisine": "cn_home",
+    "type": "side",
+    "goals": [
+      "balanced"
+    ],
+    "tags": [
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 91,
+    "name": "经典凯撒沙拉",
+    "cuisine": "salad",
+    "type": "side",
+    "goals": [
+      "balanced"
+    ],
+    "tags": [
+      "salad"
+    ]
+  },
+  {
+    "id": 92,
+    "name": "番茄芝士沙拉",
+    "cuisine": "salad",
+    "type": "side",
+    "goals": [
+      "balanced"
+    ],
+    "tags": [
+      "salad",
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 93,
+    "name": "希腊黄瓜菲达沙拉",
+    "cuisine": "salad",
+    "type": "side",
+    "goals": [
+      "diet"
+    ],
+    "tags": [
+      "salad",
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 94,
+    "name": "芝麻香油菠菜沙拉",
+    "cuisine": "salad",
+    "type": "side",
+    "goals": [
+      "diet"
+    ],
+    "tags": [
+      "salad",
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 95,
+    "name": "苹果坚果杂粮沙拉",
+    "cuisine": "salad",
+    "type": "side",
+    "goals": [
+      "diet"
+    ],
+    "tags": [
+      "salad",
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 96,
+    "name": "菠菜藜麦冷沙拉",
+    "cuisine": "salad",
+    "type": "side",
+    "goals": [
+      "diet"
+    ],
+    "tags": [
+      "salad",
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 97,
+    "name": "西红柿鸡蛋汤",
+    "cuisine": "cn_home",
+    "type": "soup",
+    "goals": [
+      "balanced"
+    ],
+    "tags": [
+      "mild"
+    ]
+  },
+  {
+    "id": 98,
+    "name": "紫菜蛋花汤",
+    "cuisine": "cn_home",
+    "type": "soup",
+    "goals": [
+      "balanced"
+    ],
+    "tags": [
+      "mild"
+    ]
+  },
+  {
+    "id": 99,
+    "name": "冬瓜排骨汤",
+    "cuisine": "cn_home",
+    "type": "soup",
+    "goals": [
+      "balanced",
+      "protein"
+    ],
+    "tags": [
+      "mild"
+    ]
+  },
+  {
+    "id": 100,
+    "name": "玉米排骨汤",
+    "cuisine": "cn_home",
+    "type": "soup",
+    "goals": [
+      "comfort"
+    ],
+    "tags": [
+      "mild"
+    ]
+  },
+  {
+    "id": 101,
+    "name": "菌菇鸡汤",
+    "cuisine": "cn_home",
+    "type": "soup",
+    "goals": [
+      "comfort",
+      "protein"
+    ],
+    "tags": [
+      "mild"
+    ]
+  },
+  {
+    "id": 102,
+    "name": "萝卜牛腩汤",
+    "cuisine": "cn_home",
+    "type": "soup",
+    "goals": [
+      "comfort"
+    ],
+    "tags": []
+  },
+  {
+    "id": 103,
+    "name": "酸辣汤",
+    "cuisine": "cn_home",
+    "type": "soup",
+    "goals": [
+      "balanced"
+    ],
+    "tags": [
+      "spicy"
+    ]
+  },
+  {
+    "id": 104,
+    "name": "海带豆腐汤",
+    "cuisine": "cn_home",
+    "type": "soup",
+    "goals": [
+      "diet"
+    ],
+    "tags": [
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 105,
+    "name": "日式味噌汤",
+    "cuisine": "cn_home",
+    "type": "soup",
+    "goals": [
+      "balanced"
+    ],
+    "tags": [
+      "mild"
+    ]
+  },
+  {
+    "id": 106,
+    "name": "韩式泡菜豆腐汤",
+    "cuisine": "cn_home",
+    "type": "soup",
+    "goals": [
+      "balanced"
+    ],
+    "tags": [
+      "spicy"
+    ]
+  },
+  {
+    "id": 107,
+    "name": "南瓜浓汤",
+    "cuisine": "cn_home",
+    "type": "soup",
+    "goals": [
+      "comfort"
+    ],
+    "tags": [
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 108,
+    "name": "意式蔬菜杂汤",
+    "cuisine": "cn_home",
+    "type": "soup",
+    "goals": [
+      "diet"
+    ],
+    "tags": [
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 109,
+    "name": "牛肉蔬菜罗宋汤",
+    "cuisine": "cn_home",
+    "type": "soup",
+    "goals": [
+      "balanced"
+    ],
+    "tags": []
+  },
+  {
+    "id": 110,
+    "name": "越南牛肉河粉汤底",
+    "cuisine": "cn_home",
+    "type": "soup",
+    "goals": [
+      "balanced"
+    ],
+    "tags": [
+      "spicy"
+    ]
+  },
+  {
+    "id": 111,
+    "name": "泰式椰香鸡汤",
+    "cuisine": "cn_home",
+    "type": "soup",
+    "goals": [
+      "comfort"
+    ],
+    "tags": []
+  },
+  {
+    "id": 112,
+    "name": "水果酸奶燕麦杯",
+    "cuisine": "dessert",
+    "type": "breakfast",
+    "goals": [
+      "diet"
+    ],
+    "tags": [
+      "vegetarian",
+      "breakfast"
+    ]
+  },
+  {
+    "id": 113,
+    "name": "花生酱香蕉燕麦粥",
+    "cuisine": "dessert",
+    "type": "breakfast",
+    "goals": [
+      "comfort"
+    ],
+    "tags": [
+      "vegetarian",
+      "breakfast"
+    ]
+  },
+  {
+    "id": 114,
+    "name": "鸡蛋牛油果三明治",
+    "cuisine": "dessert",
+    "type": "breakfast",
+    "goals": [
+      "balanced",
+      "protein"
+    ],
+    "tags": [
+      "breakfast"
+    ]
+  },
+  {
+    "id": 115,
+    "name": "番茄火腿芝士三明治",
+    "cuisine": "dessert",
+    "type": "breakfast",
+    "goals": [
+      "comfort"
+    ],
+    "tags": [
+      "breakfast"
+    ]
+  },
+  {
+    "id": 116,
+    "name": "牛奶燕麦粥配坚果",
+    "cuisine": "dessert",
+    "type": "breakfast",
+    "goals": [
+      "balanced"
+    ],
+    "tags": [
+      "breakfast",
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 117,
+    "name": "菠菜蛋白煎饼卷",
+    "cuisine": "dessert",
+    "type": "breakfast",
+    "goals": [
+      "diet",
+      "protein"
+    ],
+    "tags": [
+      "high_protein",
+      "breakfast"
+    ]
+  },
+  {
+    "id": 118,
+    "name": "藜麦酸奶能量碗",
+    "cuisine": "dessert",
+    "type": "breakfast",
+    "goals": [
+      "diet"
+    ],
+    "tags": [
+      "vegetarian",
+      "breakfast"
+    ]
+  },
+  {
+    "id": 119,
+    "name": "豆浆油条（少油版）",
+    "cuisine": "dessert",
+    "type": "breakfast",
+    "goals": [
+      "comfort"
+    ],
+    "tags": [
+      "breakfast"
+    ]
+  },
+  {
+    "id": 120,
+    "name": "玉米鸡蛋饼",
+    "cuisine": "dessert",
+    "type": "breakfast",
+    "goals": [
+      "balanced"
+    ],
+    "tags": [
+      "breakfast"
+    ]
+  },
+  {
+    "id": 121,
+    "name": "黑芝麻糊配全麦吐司",
+    "cuisine": "dessert",
+    "type": "breakfast",
+    "goals": [
+      "comfort"
+    ],
+    "tags": [
+      "vegetarian",
+      "breakfast"
+    ]
+  },
+  {
+    "id": 122,
+    "name": "低糖水果酸奶杯",
+    "cuisine": "dessert",
+    "type": "side",
+    "goals": [
+      "diet"
+    ],
+    "tags": [
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 123,
+    "name": "黑巧克力坚果碗",
+    "cuisine": "dessert",
+    "type": "side",
+    "goals": [
+      "comfort"
+    ],
+    "tags": [
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 124,
+    "name": "椰奶西米露（减糖版）",
+    "cuisine": "dessert",
+    "type": "side",
+    "goals": [
+      "comfort"
+    ],
+    "tags": [
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 125,
+    "name": "红豆紫米羹",
+    "cuisine": "dessert",
+    "type": "side",
+    "goals": [
+      "comfort"
+    ],
+    "tags": [
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 126,
+    "name": "抹茶红豆冰沙",
+    "cuisine": "dessert",
+    "type": "side",
+    "goals": [
+      "comfort"
+    ],
+    "tags": [
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 127,
+    "name": "烤红薯块",
+    "cuisine": "dessert",
+    "type": "side",
+    "goals": [
+      "diet"
+    ],
+    "tags": [
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 128,
+    "name": "蜂蜜柠檬水果盘",
+    "cuisine": "dessert",
+    "type": "side",
+    "goals": [
+      "diet"
+    ],
+    "tags": [
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 129,
+    "name": "酸奶冻干水果碗",
+    "cuisine": "dessert",
+    "type": "side",
+    "goals": [
+      "diet"
+    ],
+    "tags": [
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 130,
+    "name": "柠檬薄荷气泡水",
+    "cuisine": "dessert",
+    "type": "drink",
+    "goals": [
+      "diet"
+    ],
+    "tags": [
+      "drink",
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 131,
+    "name": "无糖豆浆",
+    "cuisine": "dessert",
+    "type": "drink",
+    "goals": [
+      "diet",
+      "balanced"
+    ],
+    "tags": [
+      "drink",
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 132,
+    "name": "黑咖啡",
+    "cuisine": "dessert",
+    "type": "drink",
+    "goals": [
+      "diet"
+    ],
+    "tags": [
+      "drink"
+    ]
+  },
+  {
+    "id": 133,
+    "name": "鲜榨橙汁（少糖）",
+    "cuisine": "dessert",
+    "type": "drink",
+    "goals": [
+      "balanced"
+    ],
+    "tags": [
+      "drink",
+      "vegetarian"
+    ]
+  },
+  {
+    "id": 134,
+    "name": "温热蜂蜜柠檬水",
+    "cuisine": "dessert",
+    "type": "drink",
+    "goals": [
+      "comfort"
+    ],
+    "tags": [
+      "drink",
+      "vegetarian"
+    ]
+  }
+];
+
+    const CUISINE_LABELS = {
+      "cn_home": "中餐 · 家常",
+      "cn_sichuan": "中餐 · 川湘辣",
+      "cn_cantonese": "粤菜 / 港式",
+      "japanese": "日料",
+      "korean": "韩式",
+      "western": "西餐",
+      "thai": "东南亚 / 泰式",
+      "salad": "沙拉 / 轻食",
+      "dessert": "早餐 / 小甜点"
+    };
+
+    const GOAL_LABELS = {
+      "diet": "减脂轻食",
+      "balanced": "日常均衡",
+      "protein": "高蛋白 / 健身",
+      "comfort": "安慰解馋"
+    };
+
+    function isVegetarian(recipe) {
+      return recipe.tags && recipe.tags.includes("vegetarian");
+    }
+
+    function isHighProtein(recipe) {
+      return recipe.tags && recipe.tags.includes("high_protein");
+    }
+
+    function isSpicy(recipe) {
+      return recipe.tags && recipe.tags.includes("spicy");
+    }
+
+    function randomFrom(array) {
+      if (!array.length) return null;
+      const idx = Math.floor(Math.random() * array.length);
+      return array[idx];
+    }
+
+    function shuffle(arr) {
+      const a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function collectFilters(preset) {
+      if (preset) return preset;
+      const goal = document.getElementById("goalFilter").value || null;
+      const cuisine = document.getElementById("cuisineFilter").value || null;
+      const vegPref = document.getElementById("vegFilter").value || "any";
+      return { goal, cuisine, vegPref };
+    }
+
+    function filterRecipes(filters) {
+      let list = RECIPES.filter(r => true);
+
+      if (filters.goal) {
+        list = list.filter(r => Array.isArray(r.goals) && r.goals.includes(filters.goal));
+      }
+
+      if (filters.cuisine) {
+        list = list.filter(r => r.cuisine === filters.cuisine);
+      }
+
+      if (filters.vegPref === "veggie") {
+        list = list.filter(r => isVegetarian(r));
+      } else if (filters.vegPref === "meat") {
+        list = list.filter(r => !isVegetarian(r) || isHighProtein(r));
+      }
+
+      // 如果筛完太少，自动放宽条件
+      if (list.length < 6) {
+        let relaxed = RECIPES.slice();
+
+        if (filters.cuisine) {
+          relaxed = relaxed.filter(r => r.cuisine === filters.cuisine);
+        }
+
+        if (filters.vegPref === "veggie") {
+          relaxed = relaxed.filter(r => isVegetarian(r));
+        } else if (filters.vegPref === "meat") {
+          relaxed = relaxed.filter(r => !isVegetarian(r) || isHighProtein(r));
+        }
+
+        if (relaxed.length >= 6) {
+          return { list: relaxed, relaxed: true };
+        }
+      }
+
+      if (!list.length) {
+        return { list: RECIPES.slice(), relaxed: true };
+      }
+
+      return { list, relaxed: false };
+    }
+
+    function pickMenuFromList(list) {
+      const mains = list.filter(r => r.type === "main" || r.type === "salad" || r.type === "breakfast");
+      const sides = list.filter(r => r.type === "side" || r.type === "salad");
+      const soups = list.filter(r => r.type === "soup" || r.type === "drink");
+
+      const menu = [];
+      const usedIds = new Set();
+
+      const main = randomFrom(mains);
+      if (main) {
+        menu.push({ role: "主菜 / 主食", recipe: main });
+        usedIds.add(main.id);
+      }
+
+      const sideCandidates = sides.filter(r => !usedIds.has(r.id));
+      const side = randomFrom(sideCandidates);
+      if (side) {
+        menu.push({ role: "配菜 / 沙拉", recipe: side });
+        usedIds.add(side.id);
+      }
+
+      const soupCandidates = soups.filter(r => !usedIds.has(r.id));
+      const soup = randomFrom(soupCandidates);
+      if (soup) {
+        menu.push({ role: "汤品 / 饮品", recipe: soup });
+        usedIds.add(soup.id);
+      }
+
+      if (menu.length < 3) {
+        const remaining = list.filter(r => !usedIds.has(r.id));
+        const shuffled = shuffle(remaining);
+        for (const r of shuffled) {
+          if (menu.length >= 3) break;
+          menu.push({ role: "加一道", recipe: r });
+        }
+      }
+
+      return menu;
+    }
+
+    function describeRecipe(recipe) {
+      const parts = [];
+
+      if (CUISINE_LABELS[recipe.cuisine]) {
+        parts.push(CUISINE_LABELS[recipe.cuisine]);
+      }
+
+      if (isVegetarian(recipe)) {
+        parts.push("偏素");
+      } else if (isHighProtein(recipe)) {
+        parts.push("高蛋白");
+      }
+
+      if (isSpicy(recipe)) {
+        parts.push("偏辣");
+      }
+
+      if (recipe.goals && recipe.goals.includes("diet")) {
+        parts.push("适合控制热量");
+      }
+
+      return parts.join(" · ");
+    }
+
+    function renderMenu(menu, filters, totalCandidates, relaxed) {
+      const container = document.getElementById("menuResult");
+      const metaEl = document.getElementById("menuMeta");
+
+      container.classList.remove("empty");
+      container.innerHTML = "";
+
+      if (!menu.length) {
+        container.classList.add("empty");
+        container.innerHTML = "<p>今天菜库有点害羞，没选出来结果，可以再点一次试试。</p>";
+        metaEl.textContent = "";
+        return;
+      }
+
+      const bits = [];
+      if (filters.goal && GOAL_LABELS[filters.goal]) {
+        bits.push(GOAL_LABELS[filters.goal]);
+      }
+      if (filters.cuisine && CUISINE_LABELS[filters.cuisine]) {
+        bits.push(CUISINE_LABELS[filters.cuisine]);
+      }
+      if (filters.vegPref === "veggie") {
+        bits.push("偏素");
+      } else if (filters.vegPref === "meat") {
+        bits.push("多吃肉 / 高蛋白");
+      }
+
+      const pickedText = bits.length ? bits.join(" · ") : "完全随缘搭配";
+      const relaxedNote = relaxed ? " · 实际已自动放宽一点条件，保证菜式够丰富" : "";
+      metaEl.innerHTML = `<strong>${totalCandidates}</strong> 道候选菜里为你挑了 <strong>${menu.length}</strong> 道${relaxedNote ? relaxedNote : ""}<br/><span>${pickedText}</span>`;
+
+      for (const item of menu) {
+        const card = document.createElement("div");
+        card.className = "recipe-card";
+
+        const glow = document.createElement("div");
+        glow.className = "recipe-glow";
+        card.appendChild(glow);
+
+        const roleEl = document.createElement("div");
+        roleEl.className = "recipe-role";
+        roleEl.textContent = item.role;
+        card.appendChild(roleEl);
+
+        const nameEl = document.createElement("div");
+        nameEl.className = "recipe-name";
+        nameEl.textContent = item.recipe.name;
+        card.appendChild(nameEl);
+
+        const metaText = describeRecipe(item.recipe);
+        if (metaText) {
+          const metaEl = document.createElement("div");
+          metaEl.className = "recipe-meta";
+          metaEl.textContent = metaText;
+          card.appendChild(metaEl);
+        }
+
+        const tagsRow = document.createElement("div");
+        tagsRow.className = "tag-row";
+
+        if (Array.isArray(item.recipe.goals)) {
+          for (const g of item.recipe.goals.slice(0, 2)) {
+            const pill = document.createElement("span");
+            pill.className = "tag-pill goal";
+            pill.textContent = GOAL_LABELS[g] || g;
+            tagsRow.appendChild(pill);
+          }
+        }
+
+        if (isSpicy(item.recipe)) {
+          const pill = document.createElement("span");
+          pill.className = "tag-pill spicy";
+          pill.textContent = "有点辣";
+          tagsRow.appendChild(pill);
+        }
+
+        if (isVegetarian(item.recipe)) {
+          const pill = document.createElement("span");
+          pill.className = "tag-pill light";
+          pill.textContent = "多菜 / 偏素";
+          tagsRow.appendChild(pill);
+        } else if (isHighProtein(item.recipe)) {
+          const pill = document.createElement("span");
+          pill.className = "tag-pill light";
+          pill.textContent = "高蛋白";
+          tagsRow.appendChild(pill);
+        }
+
+        if (tagsRow.children.length) {
+          card.appendChild(tagsRow);
+        }
+
+        container.appendChild(card);
+      }
+    }
+
+    (function setup() {
+      let lastFilters = null;
+      let lastCandidates = RECIPES.length;
+      let lastRelaxed = false;
+
+      function generate(preset) {
+        const filters = collectFilters(preset);
+        const { list, relaxed } = filterRecipes(filters);
+        const menu = pickMenuFromList(list);
+        lastFilters = filters;
+        lastCandidates = list.length;
+        lastRelaxed = relaxed;
+        renderMenu(menu, filters, list.length, relaxed);
+      }
+
+      document.getElementById("btnGenerate").addEventListener("click", () => generate());
+      document.getElementById("btnShuffle").addEventListener("click", () => {
+        if (lastFilters) {
+          generate(lastFilters);
+        } else {
+          generate();
+        }
+      });
+      document.getElementById("btnSuperRandom").addEventListener("click", () => {
+        generate({ goal: null, cuisine: null, vegPref: "any", superRandom: true });
+      });
+    })();
+  </script>
+</body>
+</html>
