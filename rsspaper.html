@@ -3,327 +3,391 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EconScholar Feed | 经济学前沿追踪</title>
+    <title>EconReader Pro (Qi Style)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Alpine.js (用于处理数据逻辑，比原生JS更简洁) -->
+    <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts (Serif for reading) -->
-    <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;1,300&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .serif { font-family: 'Merriweather', serif; }
-        .line-clamp-3 {
-            display: -webkit-box;
-            -webkit-line-clamp: 3;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-        /* 自定义滚动条 */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #f1f5f9; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        body { font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden; }
+        .font-serif { font-family: 'Merriweather', serif; }
+        
+        /* 隐藏滚动条但保留功能 (Mac风格) */
+        .hide-scroll::-webkit-scrollbar { width: 0px; background: transparent; }
+        .hover-scroll::-webkit-scrollbar { width: 6px; }
+        .hover-scroll::-webkit-scrollbar-thumb { background-color: rgba(156, 163, 175, 0.5); border-radius: 3px; }
+        
+        /* 文章选中态 */
+        .article-active { background-color: #F3F4F6; border-left: 4px solid #F59E0B; }
+        .article-item { border-left: 4px solid transparent; }
+        
+        /* 阅读区排版优化 */
+        .prose p { margin-bottom: 1.5em; line-height: 1.8; color: #374151; font-size: 1.05rem; }
+        .prose h1, .prose h2 { color: #111827; font-weight: 700; margin-top: 1.5em; margin-bottom: 0.5em; }
+        .prose a { color: #2563EB; text-decoration: underline; text-underline-offset: 2px; }
         
         [x-cloak] { display: none !important; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 h-screen flex overflow-hidden" x-data="rssApp()">
+<body class="bg-white text-slate-800 flex" x-data="qiReaderApp()" @keydown.window="handleKeydown($event)">
 
-    <!-- Login Modal (模拟登录) -->
-    <div x-show="!isLoggedIn" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/90 backdrop-blur-sm transition-opacity duration-300">
-        <div class="bg-white p-8 rounded-2xl shadow-2xl w-96 text-center transform transition-all duration-300 scale-100">
-            <div class="mb-4 text-blue-600 text-4xl"><i class="fa-solid fa-layer-group"></i></div>
-            <h2 class="text-2xl font-bold mb-2 text-slate-800">EconScholar</h2>
-            <p class="text-slate-500 text-sm mb-6">经济学博士的专属文献流</p>
-            <input type="email" placeholder="Email (edu)" class="w-full p-3 mb-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <input type="password" placeholder="Password" class="w-full p-3 mb-6 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <button @click="login()" class="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition shadow-lg shadow-blue-500/30">
-                Sign In
-            </button>
-            <p class="mt-4 text-xs text-slate-400">模拟演示模式：点击任意登录</p>
-        </div>
-    </div>
-
-    <!-- 左侧侧边栏：源管理 -->
-    <aside class="w-72 bg-white border-r border-slate-200 flex flex-col z-10 hidden md:flex">
-        <div class="p-6 border-b border-slate-100 flex items-center justify-between">
-            <span class="font-bold text-xl tracking-tight text-slate-800"><i class="fa-solid fa-rss text-blue-500 mr-2"></i>Feeds</span>
-            <div class="relative group">
-                <button class="text-slate-400 hover:text-blue-600"><i class="fa-solid fa-plus"></i></button>
-                <!-- Tooltip -->
-                <div class="absolute left-full ml-2 top-0 w-max bg-slate-800 text-white text-xs p-2 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition">Add RSS Source</div>
+    <!-- 1. 左侧栏：源列表 (Sidebar) -->
+    <aside class="w-64 bg-slate-50 border-r border-slate-200 flex-shrink-0 flex flex-col transition-all duration-300" 
+           :class="{'w-0 opacity-0 overflow-hidden': !sidebarOpen, 'w-64': sidebarOpen}">
+        
+        <!-- 用户信息区 -->
+        <div class="p-4 border-b border-slate-200 flex items-center justify-between">
+            <div class="flex items-center gap-2 font-bold text-slate-700">
+                <div class="w-6 h-6 bg-amber-500 rounded text-white flex items-center justify-center text-xs">Q</div>
+                <span>EconReader</span>
             </div>
+            <button class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-gear"></i></button>
         </div>
 
-        <nav class="flex-1 overflow-y-auto p-4 space-y-6">
-            <!-- Channel Group 1: Working Papers -->
+        <!-- 订阅源列表 -->
+        <nav class="flex-1 overflow-y-auto hover-scroll p-2 space-y-6">
+            
+            <!-- Folder: Working Papers -->
             <div>
-                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 px-2">Working Papers</h3>
-                <ul class="space-y-1">
-                    <template x-for="source in sources.filter(s => s.category === 'wp')">
-                        <li @click="filterSource(source.id)" 
-                            :class="{'bg-blue-50 text-blue-700': currentFilter === source.id, 'text-slate-600 hover:bg-slate-50': currentFilter !== source.id}"
-                            class="cursor-pointer px-3 py-2 rounded-lg text-sm font-medium transition flex justify-between items-center group">
-                            <span x-text="source.name"></span>
-                            <span class="text-xs bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded group-hover:bg-white" x-text="source.count">0</span>
+                <div class="px-2 mb-1 text-xs font-semibold text-slate-400 uppercase tracking-wider">Working Papers</div>
+                <ul class="space-y-0.5">
+                    <template x-for="feed in feeds.filter(f => f.category === 'wp')">
+                        <li @click="selectFeed(feed.id)" 
+                            :class="{'bg-white shadow-sm text-amber-600': currentFeedId === feed.id, 'text-slate-600 hover:bg-slate-100': currentFeedId !== feed.id}"
+                            class="cursor-pointer px-3 py-1.5 rounded-md text-sm flex justify-between items-center transition-colors">
+                            <span class="truncate flex items-center gap-2">
+                                <i class="fa-regular fa-file-lines text-xs opacity-70"></i>
+                                <span x-text="feed.name"></span>
+                            </span>
+                            <span x-show="feed.count > 0" class="text-xs text-slate-400" x-text="feed.count"></span>
                         </li>
                     </template>
                 </ul>
             </div>
 
-            <!-- Channel Group 2: Top Journals -->
+            <!-- Folder: Journals -->
             <div>
-                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 px-2">Top 5 Journals</h3>
-                <ul class="space-y-1">
-                    <template x-for="source in sources.filter(s => s.category === 'journal')">
-                        <li @click="filterSource(source.id)" 
-                            :class="{'bg-purple-50 text-purple-700': currentFilter === source.id, 'text-slate-600 hover:bg-slate-50': currentFilter !== source.id}"
-                            class="cursor-pointer px-3 py-2 rounded-lg text-sm font-medium transition flex justify-between items-center group">
-                            <span x-text="source.name"></span>
-                        </li>
-                    </template>
-                </ul>
-            </div>
-
-             <!-- Channel Group 3: Blogs/News -->
-             <div>
-                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 px-2">Expand Thinking</h3>
-                <ul class="space-y-1">
-                    <template x-for="source in sources.filter(s => s.category === 'blog')">
-                        <li @click="filterSource(source.id)" 
-                            :class="{'bg-emerald-50 text-emerald-700': currentFilter === source.id, 'text-slate-600 hover:bg-slate-50': currentFilter !== source.id}"
-                            class="cursor-pointer px-3 py-2 rounded-lg text-sm font-medium transition flex justify-between items-center group">
-                            <span x-text="source.name"></span>
+                <div class="px-2 mb-1 text-xs font-semibold text-slate-400 uppercase tracking-wider">Top Journals</div>
+                <ul class="space-y-0.5">
+                    <template x-for="feed in feeds.filter(f => f.category === 'journal')">
+                        <li @click="selectFeed(feed.id)" 
+                            :class="{'bg-white shadow-sm text-blue-600': currentFeedId === feed.id, 'text-slate-600 hover:bg-slate-100': currentFeedId !== feed.id}"
+                            class="cursor-pointer px-3 py-1.5 rounded-md text-sm flex justify-between items-center transition-colors">
+                            <span class="truncate flex items-center gap-2">
+                                <i class="fa-solid fa-book-open text-xs opacity-70"></i>
+                                <span x-text="feed.name"></span>
+                            </span>
                         </li>
                     </template>
                 </ul>
             </div>
         </nav>
-
-        <div class="p-4 border-t border-slate-100">
-            <button @click="isLoggedIn = false" class="flex items-center text-sm text-slate-500 hover:text-red-500 transition">
-                <img src="https://ui-avatars.com/api/?name=PhD+Student&background=0D8ABC&color=fff" class="w-8 h-8 rounded-full mr-3">
-                <div class="text-left">
-                    <div class="font-bold text-slate-700">PhD Candidate</div>
-                    <div class="text-xs">Log Out</div>
-                </div>
-            </button>
+        
+        <!-- 底部状态 -->
+        <div class="p-3 border-t border-slate-200 text-xs text-slate-400 flex justify-between">
+            <span x-text="isLoggedIn ? 'Online' : 'Guest Mode'"></span>
+            <button x-show="!isLoggedIn" @click="showLogin = true" class="text-amber-600 hover:underline">Login</button>
         </div>
     </aside>
 
-    <!-- 中间内容：Paper流 -->
-    <main class="flex-1 flex flex-col min-w-0 bg-slate-50 relative">
+    <!-- 2. 中间栏：文章列表 (Article List) -->
+    <div class="w-80 md:w-96 border-r border-slate-200 bg-white flex flex-col flex-shrink-0 z-10 shadow-sm relative transition-all"
+         :class="{'flex-1': mobileView && !selectedArticle, 'hidden': mobileView && selectedArticle}">
         
-        <!-- Header -->
-        <header class="bg-white border-b border-slate-200 px-8 py-5 flex justify-between items-center shadow-sm z-20">
-            <div>
-                <h1 class="text-2xl font-bold text-slate-800 serif" x-text="getHeaderTitle()"></h1>
-                <p class="text-sm text-slate-500 mt-1">
-                    <span x-text="articles.length"></span> papers fetched | Last updated: <span x-text="lastUpdated"></span>
-                </p>
+        <!-- 列表头部 -->
+        <div class="h-12 border-b border-slate-100 flex items-center justify-between px-4 bg-white/95 backdrop-blur sticky top-0 z-20">
+            <div class="flex items-center gap-3">
+                <button @click="sidebarOpen = !sidebarOpen" class="text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <h2 class="font-semibold text-slate-700 text-sm truncate w-40" x-text="getFeedName()"></h2>
             </div>
-            <div class="flex gap-3">
-                <button @click="fetchFeeds()" class="p-2 text-slate-400 hover:text-blue-600 transition" title="Refresh">
+            <div class="flex gap-2">
+                <button @click="refreshFeeds()" class="text-slate-400 hover:text-amber-500" title="Refresh (R)">
                     <i class="fa-solid fa-arrows-rotate" :class="{'animate-spin': loading}"></i>
                 </button>
-                <div class="relative">
-                    <input type="text" x-model="searchQuery" placeholder="Filter by keyword..." class="bg-slate-100 border-none rounded-full px-4 py-2 text-sm w-64 focus:ring-2 focus:ring-blue-200 outline-none transition">
-                    <i class="fa-solid fa-search absolute right-3 top-2.5 text-slate-400 text-xs"></i>
-                </div>
             </div>
-        </header>
-
-        <!-- Loading State -->
-        <div x-show="loading" class="flex-1 flex items-center justify-center flex-col text-slate-400">
-            <i class="fa-solid fa-circle-notch fa-spin text-4xl mb-4 text-blue-500"></i>
-            <p>Fetching latest research data...</p>
         </div>
 
-        <!-- Scrollable Feed Area -->
-        <div x-show="!loading" class="flex-1 overflow-y-auto p-6 md:px-12 md:py-8 space-y-6">
-            
-            <!-- Article Card Template -->
-            <template x-for="article in filteredArticles" :key="article.link">
-                <article class="bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition duration-300 overflow-hidden group">
-                    <div class="p-6">
-                        <div class="flex justify-between items-start mb-3">
-                            <span class="text-xs font-bold px-2 py-1 rounded bg-slate-100 text-slate-600 uppercase tracking-wide" x-text="article.sourceName"></span>
-                            <span class="text-xs text-slate-400 font-mono" x-text="formatDate(article.pubDate)"></span>
-                        </div>
-                        
-                        <a :href="article.link" target="_blank" class="block group-hover:text-blue-700 transition">
-                            <h2 class="text-xl font-bold text-slate-800 mb-2 serif leading-tight" x-html="article.title"></h2>
-                        </a>
-
-                        <!-- 作者 (RSS通常不直接提供干净的作者字段，这里模拟展示) -->
-                        <div class="text-sm text-slate-500 mb-4 italic" x-show="article.author" x-text="'By ' + article.author"></div>
-                        
-                        <!-- 摘要 -->
-                        <div class="text-slate-600 text-sm leading-relaxed mb-4 line-clamp-3" x-html="stripHtml(article.description)"></div>
-
-                        <!-- Actions -->
-                        <div class="flex items-center justify-between pt-4 border-t border-slate-50 mt-4">
-                            <div class="flex gap-4">
-                                <button @click="toggleSave(article)" class="text-slate-400 hover:text-yellow-500 text-sm flex items-center gap-1 transition">
-                                    <i :class="article.saved ? 'fa-solid fa-bookmark text-yellow-500' : 'fa-regular fa-bookmark'"></i> 
-                                    <span x-text="article.saved ? 'Saved' : 'Save'"></span>
-                                </button>
-                                <button @click="emailPaper(article)" class="text-slate-400 hover:text-blue-500 text-sm flex items-center gap-1 transition">
-                                    <i class="fa-regular fa-envelope"></i> Email Me
-                                </button>
-                            </div>
-                            <a :href="article.link" target="_blank" class="text-blue-600 font-medium text-sm hover:underline">Read Paper <i class="fa-solid fa-arrow-right text-xs ml-1"></i></a>
-                        </div>
-                    </div>
-                </article>
-            </template>
-            
-            <!-- Empty State -->
-            <div x-show="filteredArticles.length === 0" class="text-center py-20 text-slate-400">
-                <i class="fa-solid fa-wind text-4xl mb-4"></i>
-                <p>No papers found matching your criteria.</p>
+        <!-- 列表容器 -->
+        <div class="flex-1 overflow-y-auto hover-scroll" id="articleList">
+            <!-- Loading -->
+            <div x-show="loading" class="p-8 text-center text-slate-400">
+                <i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2"></i>
+                <p class="text-xs">Syncing Papers...</p>
             </div>
 
+            <!-- Articles -->
+            <template x-for="article in filteredArticles" :key="article.link">
+                <div @click="selectArticle(article)" 
+                     :id="'article-' + article.id"
+                     class="article-item p-4 cursor-pointer border-b border-slate-50 hover:bg-slate-50 transition-colors group"
+                     :class="{'article-active': selectedArticle && selectedArticle.link === article.link}">
+                    
+                    <div class="flex justify-between items-baseline mb-1">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-tight" x-text="article.sourceName"></span>
+                        <span class="text-xs text-slate-300 font-mono group-hover:text-slate-400" x-text="formatTime(article.pubDate)"></span>
+                    </div>
+                    
+                    <h3 class="text-sm font-semibold text-slate-800 leading-snug mb-1.5 line-clamp-2" x-text="article.title"></h3>
+                    
+                    <p class="text-xs text-slate-500 line-clamp-2 leading-relaxed" x-html="stripHtml(article.description)"></p>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- 3. 右侧栏：阅读器 (Reader Pane) -->
+    <main class="flex-1 bg-white flex flex-col min-w-0 relative h-full"
+          :class="{'hidden': mobileView && !selectedArticle, 'block': mobileView && selectedArticle}">
+        
+        <!-- 空状态 -->
+        <div x-show="!selectedArticle" class="flex-1 flex flex-col items-center justify-center text-slate-300">
+            <i class="fa-regular fa-newspaper text-6xl mb-4 opacity-50"></i>
+            <p class="text-sm">Select an article to read</p>
+            <div class="mt-8 flex gap-4 text-xs font-mono border p-4 rounded border-slate-100">
+                <span><kbd class="bg-slate-100 px-1.5 py-0.5 rounded border border-slate-300">j</kbd> Next</span>
+                <span><kbd class="bg-slate-100 px-1.5 py-0.5 rounded border border-slate-300">k</kbd> Prev</span>
+            </div>
+        </div>
+
+        <!-- 文章内容 -->
+        <div x-show="selectedArticle" class="flex-1 overflow-y-auto hover-scroll relative scroll-smooth bg-white" id="readerContent">
+            
+            <!-- 顶部工具栏 (Floating) -->
+            <div class="sticky top-0 bg-white/90 backdrop-blur border-b border-slate-100 px-6 py-3 flex justify-between items-center z-30">
+                <div class="flex items-center gap-4">
+                    <button @click="selectedArticle = null" class="md:hidden text-slate-500"><i class="fa-solid fa-arrow-left"></i> Back</button>
+                    <div class="hidden md:block text-xs text-slate-400">
+                        <span x-text="readingProgress + '% read'"></span>
+                    </div>
+                </div>
+                <div class="flex gap-4 text-slate-400">
+                    <button @click="emailPaper()" class="hover:text-blue-600 tooltip-btn" title="Email to me"><i class="fa-regular fa-envelope text-lg"></i></button>
+                    <a :href="selectedArticle?.link" target="_blank" class="hover:text-slate-700" title="Open Original"><i class="fa-solid fa-arrow-up-right-from-square text-lg"></i></a>
+                </div>
+            </div>
+
+            <!-- 正文容器 -->
+            <article class="max-w-3xl mx-auto px-8 py-10" x-data="{}" x-intersect="updateReadProgress">
+                <header class="mb-8 border-b border-slate-100 pb-8">
+                    <a :href="selectedArticle?.link" target="_blank" class="block text-3xl font-bold text-slate-900 font-serif leading-tight hover:text-amber-700 transition mb-4" x-html="selectedArticle?.title"></a>
+                    
+                    <div class="flex items-center justify-between text-sm text-slate-500 font-mono">
+                        <div class="flex items-center gap-2">
+                            <span class="bg-slate-100 px-2 py-1 rounded text-slate-600" x-text="selectedArticle?.sourceName"></span>
+                            <span x-text="formatDateFull(selectedArticle?.pubDate)"></span>
+                        </div>
+                        <div x-show="selectedArticle?.author" x-text="selectedArticle?.author"></div>
+                    </div>
+                </header>
+
+                <div class="prose font-serif text-lg">
+                    <!-- 模拟摘要作为正文 -->
+                    <div x-html="selectedArticle?.description"></div>
+                    
+                    <!-- 模拟的“全文阅读”提示 -->
+                    <div class="mt-8 p-6 bg-slate-50 rounded-lg border border-slate-100 text-center">
+                        <p class="text-sm text-slate-500 mb-3 font-sans">Full text availability depends on publisher access.</p>
+                        <a :href="selectedArticle?.link" target="_blank" class="inline-block bg-slate-900 text-white px-6 py-2 rounded-full text-sm font-medium hover:bg-amber-600 transition shadow-lg">
+                            Read Full Paper at Source
+                        </a>
+                    </div>
+                </div>
+            </article>
         </div>
     </main>
 
-    <!-- 逻辑脚本 -->
+    <!-- Login Modal (Hidden by default) -->
+    <div x-show="showLogin" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" x-cloak>
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-80 text-center" @click.away="showLogin = false">
+            <h3 class="text-xl font-bold mb-4">Sync Account</h3>
+            <input type="email" placeholder="Email" class="w-full mb-3 p-2 border rounded">
+            <input type="password" placeholder="Password" class="w-full mb-4 p-2 border rounded">
+            <button @click="login()" class="w-full bg-amber-500 text-white py-2 rounded font-bold hover:bg-amber-600">Login</button>
+        </div>
+    </div>
+
     <script>
-        function rssApp() {
+        function qiReaderApp() {
             return {
+                sidebarOpen: true,
+                loading: false,
                 isLoggedIn: false,
-                loading: true,
-                currentFilter: 'all',
-                searchQuery: '',
-                lastUpdated: '',
+                showLogin: false,
+                currentFeedId: 'all',
                 articles: [],
-                
-                // 核心：这里定义了经济学博士关注的RSS源
-                // 注意：使用 rss2json API 将 RSS XML 转换为 JSON，以便 JS 读取
-                sources: [
+                selectedArticle: null,
+                readingProgress: 0,
+                mobileView: window.innerWidth < 768,
+
+                // 核心数据源 (保持真实RSS链接)
+                feeds: [
+                    { id: 'all', name: 'All Feeds', category: 'system', count: 0 },
                     { id: 'nber', name: 'NBER Working Papers', category: 'wp', url: 'https://www.nber.org/rss/new.xml', count: 0 },
-                    { id: 'voxeu', name: 'VoxEU (CEPR)', category: 'blog', url: 'https://voxeu.org/feed/rss/all', count: 0 },
-                    { id: 'marginal', name: 'Marginal Revolution', category: 'blog', url: 'https://feeds.feedburner.com/marginalrevolution/feed', count: 0 },
-                    // 由于Top 5期刊的RSS经常有防火墙，这里用模拟数据填充策略演示，如果API失败会显示模拟数据
-                    { id: 'aer', name: 'Amer. Econ. Review', category: 'journal', url: 'https://www.aeaweb.org/research/feed', count: 0 }, 
-                    { id: 'qje', name: 'QJE (Oxford)', category: 'journal', url: '', count: 0 } // QJE RSS usually blocks CORS, placeholder
+                    { id: 'ssrn', name: 'SSRN Economics', category: 'wp', url: '', count: 0 }, // Placeholder
+                    { id: 'aer', name: 'Amer. Econ. Review', category: 'journal', url: 'https://www.aeaweb.org/research/feed', count: 0 },
+                    { id: 'econometrica', name: 'Econometrica', category: 'journal', url: '', count: 0 },
+                    { id: 'marginal', name: 'Marginal Revolution', category: 'wp', url: 'https://feeds.feedburner.com/marginalrevolution/feed', count: 0 }
                 ],
+
+                init() {
+                    this.fetchFeeds();
+                    window.addEventListener('resize', () => {
+                        this.mobileView = window.innerWidth < 768;
+                    });
+                    
+                    // 监听滚动计算阅读进度
+                    const reader = document.getElementById('readerContent');
+                    reader.addEventListener('scroll', () => {
+                        const winHeight = reader.clientHeight;
+                        const docHeight = reader.scrollHeight;
+                        const scrollTop = reader.scrollTop;
+                        const pct = Math.floor((scrollTop / (docHeight - winHeight)) * 100);
+                        this.readingProgress = Math.min(100, Math.max(0, pct));
+                    });
+                },
 
                 login() {
                     this.isLoggedIn = true;
-                    this.fetchFeeds();
+                    this.showLogin = false;
+                    alert("Welcome back! Settings synced.");
                 },
 
+                // 获取 RSS 数据
                 async fetchFeeds() {
                     this.loading = true;
                     this.articles = [];
-                    const apiKey = 'rss_url'; // 使用 rss2json 的公共端点
                     
-                    // 并行获取所有源
-                    const promises = this.sources.filter(s => s.url !== '').map(source => {
-                        return fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(source.url)}`)
+                    const promises = this.feeds.filter(f => f.url).map(feed => {
+                        return fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feed.url)}`)
                             .then(res => res.json())
                             .then(data => {
                                 if(data.status === 'ok') {
-                                    const items = data.items.map(item => ({
+                                    const items = data.items.map((item, index) => ({
                                         ...item,
-                                        sourceId: source.id,
-                                        sourceName: source.name,
-                                        saved: false,
-                                        pubDate: new Date(item.pubDate.replace(/-/g, "/")) // Fix safari date parsing
+                                        id: feed.id + '-' + index, // Unique ID for keyboard nav
+                                        sourceId: feed.id,
+                                        sourceName: feed.name,
+                                        pubDate: new Date(item.pubDate.replace(/-/g, "/"))
                                     }));
-                                    source.count = items.length; // 更新计数
+                                    // 更新未读计数
+                                    const feedObj = this.feeds.find(f => f.id === feed.id);
+                                    if(feedObj) feedObj.count = items.length;
                                     return items;
                                 }
-                                return [];
-                            })
-                            .catch(err => {
-                                console.log('Fetch error:', err);
                                 return [];
                             });
                     });
 
                     const results = await Promise.all(promises);
-                    // 合并所有结果
                     this.articles = results.flat().sort((a, b) => b.pubDate - a.pubDate);
                     
-                    // 如果没有抓取到数据（可能是API限制），生成一些模拟数据以供演示
-                    if (this.articles.length < 2) {
-                        this.addMockData();
-                    }
-
-                    this.lastUpdated = new Date().toLocaleTimeString();
+                    // 填充一点假数据如果API挂了
+                    if(this.articles.length < 5) this.addMockData();
+                    
                     this.loading = false;
                 },
 
-                // 模拟数据，保证界面永远不为空，提升体验
                 addMockData() {
-                    const mocks = [
-                        { title: "Monetary Policy in a High Inflation Environment", author: "J. Powell et al.", pubDate: new Date(), sourceId: 'nber', sourceName: 'NBER Working Papers', link: '#', description: "This paper analyzes the effects of rapid rate hikes on labor markets using new micro-level data...", saved: false },
-                        { title: "The Elasticity of Intertemporal Substitution", author: "X. Gabaix", pubDate: new Date(Date.now() - 86400000), sourceId: 'aer', sourceName: 'Amer. Econ. Review', link: '#', description: "We provide new estimates of EIS using a natural experiment involving consumption tax changes...", saved: false },
-                        { title: "Why AI Will Transform Economic Modeling", author: "T. Cowen", pubDate: new Date(Date.now() - 100000000), sourceId: 'marginal', sourceName: 'Marginal Revolution', link: '#', description: "It's not just about automation, it's about how we construct counterfactuals...", saved: false },
-                    ];
+                    const mocks = Array.from({length: 10}, (_, i) => ({
+                        id: 'mock-' + i,
+                        title: i === 0 ? "Optimal Monetary Policy with Heterogeneous Agents" : "Sample Economic Paper #" + i,
+                        sourceId: 'nber',
+                        sourceName: 'NBER Working Papers',
+                        pubDate: new Date(),
+                        link: '#',
+                        author: 'Author Name',
+                        description: `<p>This paper studies the interaction between monetary policy and inequality. Using a HANK model, we find that...</p><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>`
+                    }));
                     this.articles = [...this.articles, ...mocks];
                 },
 
+                // 筛选逻辑
                 get filteredArticles() {
-                    let result = this.articles;
-                    
-                    // 1. Filter by Source
-                    if (this.currentFilter !== 'all') {
-                        result = result.filter(a => a.sourceId === this.currentFilter);
+                    if (this.currentFeedId === 'all') return this.articles;
+                    return this.articles.filter(a => a.sourceId === this.currentFeedId);
+                },
+
+                selectFeed(id) {
+                    this.currentFeedId = id;
+                    this.selectedArticle = null; // 重置阅读区
+                    // 移动端自动关闭侧边栏
+                    if(this.mobileView) this.sidebarOpen = false;
+                },
+
+                selectArticle(article) {
+                    this.selectedArticle = article;
+                    this.readingProgress = 0;
+                    // 滚动到顶部
+                    const reader = document.getElementById('readerContent');
+                    if(reader) reader.scrollTop = 0;
+                },
+
+                getFeedName() {
+                    return this.feeds.find(f => f.id === this.currentFeedId)?.name || 'Feed';
+                },
+
+                // --- 快捷键逻辑 (J/K) ---
+                handleKeydown(e) {
+                    // 如果正在输入框里，不触发
+                    if(e.target.tagName === 'INPUT') return;
+
+                    const list = this.filteredArticles;
+                    if(list.length === 0) return;
+
+                    let currentIndex = -1;
+                    if (this.selectedArticle) {
+                        currentIndex = list.findIndex(a => a.id === this.selectedArticle.id);
                     }
 
-                    // 2. Filter by Search
-                    if (this.searchQuery) {
-                        const lower = this.searchQuery.toLowerCase();
-                        result = result.filter(a => 
-                            a.title.toLowerCase().includes(lower) || 
-                            (a.description && a.description.toLowerCase().includes(lower))
-                        );
+                    if (e.key === 'j' || e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        const nextIndex = Math.min(currentIndex + 1, list.length - 1);
+                        this.selectArticle(list[nextIndex]);
+                        this.scrollToListItem(list[nextIndex].id);
+                    } else if (e.key === 'k' || e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        const prevIndex = Math.max(currentIndex - 1, 0);
+                        this.selectArticle(list[prevIndex]);
+                        this.scrollToListItem(list[prevIndex].id);
+                    } else if (e.key === 'r') {
+                        this.fetchFeeds();
                     }
-                    return result;
                 },
 
-                filterSource(id) {
-                    this.currentFilter = this.currentFilter === id ? 'all' : id;
+                scrollToListItem(id) {
+                    const el = document.getElementById('article-' + id);
+                    if(el) el.scrollIntoView({behavior: 'smooth', block: 'nearest'});
                 },
 
-                getHeaderTitle() {
-                    if (this.currentFilter === 'all') return 'Latest Research Stream';
-                    const source = this.sources.find(s => s.id === this.currentFilter);
-                    return source ? source.name : 'Stream';
+                // --- 实用工具 ---
+                formatTime(date) {
+                    if (!date) return '';
+                    return date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 },
-
-                formatDate(dateObj) {
-                    if(!dateObj) return '';
-                    const now = new Date();
-                    const diff = (now - dateObj) / (1000 * 60 * 60); // hours
-                    if (diff < 24) return Math.floor(diff) + 'h ago';
-                    return dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                formatDateFull(date) {
+                    if (!date) return '';
+                    return date.toLocaleDateString([], {weekday:'long', year:'numeric', month:'long', day:'numeric'});
                 },
-
                 stripHtml(html) {
-                    if (!html) return '';
-                    let tmp = document.createElement("DIV");
+                    const tmp = document.createElement("DIV");
                     tmp.innerHTML = html;
                     return tmp.textContent || tmp.innerText || "";
                 },
-
-                toggleSave(article) {
-                    article.saved = !article.saved;
-                },
-
-                // ✨ 核心功能：模拟推送到邮箱
-                // 这会唤起用户本地的邮件客户端
-                emailPaper(article) {
-                    const subject = `[Read Later] ${article.title}`;
-                    const body = `Title: ${article.title}\n\nSource: ${article.sourceName}\n\nLink: ${article.link}\n\nSaved from EconScholar Dashboard.`;
+                emailPaper() {
+                    if(!this.selectedArticle) return;
+                    const subject = `[Paper] ${this.selectedArticle.title}`;
+                    const body = `${this.selectedArticle.link}\n\nSent from EconReader.`;
                     window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                },
+                refreshFeeds() {
+                    this.fetchFeeds();
                 }
             }
         }
