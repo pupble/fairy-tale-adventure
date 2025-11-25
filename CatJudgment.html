@@ -2,17 +2,12 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AI 猫猫法庭 | 终极审判</title>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome 图标 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- 彩带特效 -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-    <!-- Markdown 解析 -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <!-- 可爱字体 -->
     <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
 
     <style>
@@ -20,451 +15,364 @@
         body {
             font-family: 'Noto Sans SC', sans-serif;
             background-color: #FFF0F5;
-            /* 动态背景图案 */
             background-image: radial-gradient(#FBCFE8 2px, transparent 2px), radial-gradient(#F472B6 1px, transparent 1px);
-            background-size: 40px 40px;
-            background-position: 0 0, 20px 20px;
-            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="%23F472B6"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/><circle cx="12" cy="12" r="5" fill="white"/></svg>') 12 12, auto;
+            background-size: 30px 30px;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
             overflow-x: hidden;
+            user-select: none;
         }
-
         .cute-font { font-family: 'ZCOOL KuaiLe', cursive; }
 
-        /* --- 毛玻璃卡片 --- */
+        /* --- 玻璃拟态 --- */
         .glass-panel {
-            background: rgba(255, 255, 255, 0.85);
+            background: rgba(255, 255, 255, 0.92);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            box-shadow: 0 25px 50px -12px rgba(255, 105, 180, 0.25);
+            box-shadow: 0 15px 40px -10px rgba(255, 105, 180, 0.3);
             border: 2px solid rgba(255, 255, 255, 0.8);
         }
 
-        /* --- 动画效果 --- */
-        .pop-in { animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        @keyframes popIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        /* --- SVG 猫猫动画 --- */
+        .cat-svg { width: 180px; height: 180px; overflow: visible; }
+        .cat-head { animation: floatHead 3s ease-in-out infinite; transform-origin: center bottom; }
+        .cat-eye { animation: blink 4s infinite; transform-origin: center; }
+        .cat-tail { animation: wagTail 2s ease-in-out infinite alternate; transform-origin: bottom left; }
+        
+        @keyframes floatHead { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(5px) rotate(2deg); } }
+        @keyframes blink { 0%, 96%, 98% { transform: scaleY(1); } 97% { transform: scaleY(0.1); } }
+        @keyframes wagTail { 0% { transform: rotate(-10deg); } 100% { transform: rotate(10deg); } }
 
-        .float-cat { animation: floating 3s ease-in-out infinite; }
-        @keyframes floating { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-10px) rotate(2deg); } }
-
-        /* --- 点击特效：猫爪印 --- */
-        .paw-print {
+        /* --- 投喂动画 --- */
+        .fish-item {
             position: absolute;
-            width: 30px;
-            height: 30px;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cpath fill='%23F472B6' d='M226.5 92.9c14.3 42.9-.3 86.2-32.6 96.8s-70.1-15.6-84.4-58.5s.3-86.2 32.6-96.8s70.1 15.6 84.4 58.5zM100.4 198.6c18.9 32.4 14.3 70.1-10.2 84.1s-59.1-.9-78-33.3s-14.3-70.1 10.2-84.1s59.1.9 78 33.3zm184.9 4.7c18.9-32.4 53.6-47.3 78-33.3s29.1 51.7 10.2 84.1s-53.6 47.3-78 33.3s-29.1-51.7-10.2-84.1zm-42.1 204.8c47.7-65.4 125.7-88.7 174.2-52.1s43.7 113.3-3.9 178.7s-125.7 88.7-174.2 52.1s-43.7-113.3 3.9-178.7zM362 26.6c14.3-42.9 52.1-53.5 84.4-42.9s46.9 53.9 32.6 96.8s-52.1 53.5-84.4 42.9s-46.9-53.9-32.6-96.8z'/%3E%3C/svg%3E");
-            background-size: contain;
-            background-repeat: no-repeat;
+            font-size: 24px;
             pointer-events: none;
-            opacity: 0.8;
-            transform: translate(-50%, -50%) scale(0.5);
-            animation: pawFade 1s forwards;
-            z-index: 9999;
+            animation: flyToMouth 0.8s forwards ease-in;
+            z-index: 50;
+        }
+        @keyframes flyToMouth {
+            0% { transform: translate(0, 0) scale(1); opacity: 1; }
+            100% { transform: translate(var(--tx), var(--ty)) scale(0.5); opacity: 0; }
         }
 
-        @keyframes pawFade {
-            0% { transform: translate(-50%, -50%) scale(0.5) rotate(0deg); opacity: 0.8; }
-            50% { opacity: 0.6; }
-            100% { transform: translate(-50%, -50%) scale(1.2) rotate(20deg); opacity: 0; }
-        }
-
-        /* --- 滚动条隐藏 --- */
+        /* --- 隐藏滚动条 --- */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-        /* --- 气泡对话框 --- */
-        .bubble {
-            position: absolute;
-            background: #fff;
-            padding: 10px 15px;
-            border-radius: 20px;
-            border: 2px solid #FBCFE8;
-            font-size: 14px;
-            color: #DB2777;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            opacity: 0;
-            transition: opacity 0.3s;
-            pointer-events: none;
-            white-space: nowrap;
-            z-index: 10;
-        }
-        .bubble::after {
-            content: '';
-            position: absolute;
-            bottom: -8px;
-            left: 50%;
-            transform: translateX(-50%);
-            border-width: 8px 8px 0;
-            border-style: solid;
-            border-color: #FBCFE8 transparent transparent transparent;
-        }
-        .show-bubble { opacity: 1; transform: translateY(-10px); }
     </style>
 </head>
-<!-- 添加点击事件监听器用于生成猫爪 -->
-<body class="min-h-screen flex items-center justify-center p-4 selection:bg-pink-200 selection:text-pink-900" onclick="createPaw(event)">
+<body class="min-h-screen flex items-center justify-center p-4">
 
-    <!-- App 主界面 -->
-    <div class="w-full max-w-5xl glass-panel rounded-[2.5rem] relative min-h-[720px] flex flex-col overflow-hidden pop-in transition-all duration-500">
+    <div class="w-full md:max-w-4xl glass-panel rounded-3xl relative h-[85vh] md:h-[750px] flex flex-col overflow-hidden transition-all duration-300">
         
-        <!-- 顶栏 -->
-        <header class="bg-gradient-to-r from-pink-50 to-purple-50 p-4 px-8 border-b border-pink-100 flex justify-between items-center z-50">
-            <button id="btn-back" onclick="goBack()" class="hidden group flex items-center gap-2 text-gray-500 hover:text-pink-500 transition-colors font-bold text-sm">
-                <div class="bg-white p-2 rounded-full shadow-sm group-hover:shadow-md transition">
-                    <i class="fa-solid fa-arrow-left"></i>
-                </div>
-                <span>重审</span>
+        <!-- 顶部栏 -->
+        <header class="bg-gradient-to-r from-pink-50 to-purple-50 p-3 px-5 border-b border-pink-100 flex justify-between items-center z-50 shrink-0">
+            <button id="btn-back" onclick="goBack()" class="hidden text-gray-500 hover:text-pink-500 text-sm font-bold flex items-center gap-1">
+                <i class="fa-solid fa-chevron-left"></i> 返回
             </button>
-            
-            <div class="flex flex-col items-center flex-1">
-                <h1 class="text-3xl text-pink-500 cute-font tracking-widest drop-shadow-sm flex items-center gap-2">
-                    <i class="fa-solid fa-scale-balanced text-2xl"></i>
-                    AI 猫猫法庭
-                </h1>
-                <div class="flex items-center gap-1 text-[10px] text-pink-300 font-bold uppercase tracking-wider">
-                    <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-                    DeepSeek V3 Live
-                </div>
-            </div>
-
-            <button onclick="toggleSettings()" class="text-gray-400 hover:text-pink-500 transition-transform hover:rotate-90">
-                <i class="fa-solid fa-gear text-xl"></i>
-            </button>
+            <h1 class="text-xl md:text-2xl text-pink-500 cute-font tracking-widest flex items-center gap-2 flex-1 justify-center">
+                <i class="fa-solid fa-scale-balanced"></i> AI 猫猫法庭
+            </h1>
+            <button onclick="toggleSettings()" class="text-gray-400 hover:text-pink-500 p-2"><i class="fa-solid fa-gear"></i></button>
         </header>
 
-        <!-- 设置面板 (悬浮) -->
-        <div id="settings-panel" class="hidden absolute top-16 right-6 z-[60] bg-white/95 backdrop-blur-xl p-5 rounded-2xl shadow-2xl border border-pink-200 w-80 transform transition-all origin-top-right">
-            <h3 class="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-                <i class="fa-solid fa-key text-pink-500"></i> API 密钥设置
-            </h3>
-            <div class="relative">
-                <input type="password" id="api-key-input" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm mb-3 outline-none focus:ring-2 ring-pink-300 text-gray-600 font-mono" placeholder="sk-...">
-            </div>
-            <div class="flex justify-between items-center">
-                <span class="text-xs text-gray-400">已预填测试Key，可直接使用</span>
-                <button onclick="saveSettings()" class="bg-pink-500 hover:bg-pink-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition-colors">保存配置</button>
+        <!-- API 设置 -->
+        <div id="settings-panel" class="hidden absolute top-14 left-4 right-4 z-[60] bg-white/95 p-4 rounded-xl shadow-2xl border border-pink-200 backdrop-blur-md">
+            <h3 class="text-sm font-bold text-gray-700 mb-2">DeepSeek API Key</h3>
+            <input type="password" id="api-key-input" class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm mb-3 outline-none focus:ring-2 ring-pink-300 font-mono">
+            <div class="flex justify-end gap-2">
+                <button onclick="toggleSettings()" class="text-xs text-gray-500 px-3">取消</button>
+                <button onclick="saveSettings()" class="bg-pink-500 text-white px-3 py-1 rounded-md text-xs font-bold">保存</button>
             </div>
         </div>
 
-        <!-- 内容区域 -->
-        <main class="flex-1 relative overflow-hidden">
-            
-            <!-- 1. 首页 (修正图片 + 互动) -->
-            <div id="view-landing" class="absolute inset-0 flex flex-col items-center justify-center text-center p-8 transition-transform duration-500 ease-in-out">
+        <!-- 主内容区 -->
+        <main class="flex-1 relative w-full h-full">
+
+            <!-- 1. 首页 -->
+            <div id="view-landing" class="absolute inset-0 flex flex-col items-center justify-center text-center p-6 overflow-y-auto no-scrollbar transition-transform duration-500">
                 
-                <!-- 猫猫互动区 -->
-                <div class="relative group cursor-pointer mb-8" onclick="pokeCat(event)">
-                    <!-- 气泡 -->
-                    <div id="cat-bubble" class="bubble" style="top: -40px; left: 50%; transform: translateX(-50%);">
-                        本喵今天不想加班...
-                    </div>
-                    
-                    <div class="absolute -inset-6 bg-gradient-to-tr from-pink-200 to-purple-200 rounded-full blur-xl opacity-30 group-hover:opacity-60 transition duration-700 animate-pulse"></div>
-                    <!-- 修正后的图片源，使用更稳定的 DiceBear v9 -->
-                    <img id="cat-img" src="https://api.dicebear.com/9.x/avataaars/svg?seed=Felix&backgroundColor=ffdfbf&clothing=collar&eyes=happy&mouth=smile" 
-                         onerror="this.src='https://placekitten.com/200/200'" 
-                         alt="Judge Cat" 
-                         class="float-cat relative w-52 h-52 drop-shadow-2xl hover:scale-105 transition-transform duration-300 z-10">
-                    
-                    <div class="absolute -bottom-4 -right-4 bg-white text-pink-600 px-4 py-1.5 rounded-full text-sm font-bold shadow-lg border-2 border-pink-50 rotate-6 z-20">
-                        戳我有惊喜!
+                <!-- SVG 猫猫 -->
+                <div class="relative mb-4 mt-2 group cursor-pointer" id="cat-container">
+                    <div class="absolute -inset-6 bg-pink-200 rounded-full blur-2xl opacity-30 animate-pulse"></div>
+                    <svg class="cat-svg relative z-10" viewBox="0 0 200 200">
+                        <path class="cat-tail" d="M140 160 Q 170 140 160 110 T 150 80" fill="none" stroke="#F472B6" stroke-width="12" stroke-linecap="round"/>
+                        <ellipse cx="100" cy="160" rx="60" ry="45" fill="#FCE7F3" />
+                        <g class="cat-head">
+                            <circle cx="100" cy="100" r="50" fill="#FFF0F5" stroke="#F472B6" stroke-width="3"/>
+                            <path d="M60 70 L 50 30 L 90 60 Z" fill="#FBCFE8" stroke="#F472B6" stroke-width="2"/>
+                            <path d="M140 70 L 150 30 L 110 60 Z" fill="#FBCFE8" stroke="#F472B6" stroke-width="2"/>
+                            <circle class="cat-eye" cx="80" cy="95" r="5" fill="#374151"/>
+                            <circle class="cat-eye" cx="120" cy="95" r="5" fill="#374151"/>
+                            <path d="M95 110 L 105 110 L 100 115 Z" fill="#F472B6"/>
+                            <path d="M100 115 Q 90 125 80 115 M 100 115 Q 110 125 120 115" fill="none" stroke="#374151" stroke-width="2"/>
+                            <circle cx="70" cy="110" r="6" fill="#FDA4AF" opacity="0.6"/>
+                            <circle cx="130" cy="110" r="6" fill="#FDA4AF" opacity="0.6"/>
+                            <path d="M60 60 Q 100 20 140 60" fill="none" stroke="#E5E7EB" stroke-width="15" stroke-linecap="round"/>
+                            <path d="M50 70 Q 40 90 50 110" fill="none" stroke="#E5E7EB" stroke-width="8" stroke-linecap="round"/>
+                            <path d="M150 70 Q 160 90 150 110" fill="none" stroke="#E5E7EB" stroke-width="8" stroke-linecap="round"/>
+                        </g>
+                        <g transform="translate(140, 130) rotate(-20)">
+                            <rect x="0" y="0" width="10" height="40" fill="#92400E" rx="2"/>
+                            <rect x="-15" y="0" width="40" height="15" fill="#B45309" rx="2"/>
+                        </g>
+                    </svg>
+
+                    <!-- 贿赂计数 -->
+                    <div id="bribe-counter" class="absolute -top-4 -right-4 bg-yellow-400 text-yellow-900 px-2 py-1 rounded-full text-[10px] font-bold shadow-md transform scale-0 transition-transform">
+                        已贿赂: <span>0</span>
                     </div>
                 </div>
-                
-                <h2 class="text-4xl cute-font text-gray-800 mb-4">今天谁又受委屈了？</h2>
-                <p class="text-gray-500 text-lg mb-10 max-w-lg leading-relaxed">
-                    Jimmy 和 Linda 又吵架了？<br>
-                    别急，把<span class="text-pink-500 font-bold bg-pink-50 px-1 rounded">事实</span>和<span class="text-purple-500 font-bold bg-purple-50 px-1 rounded">情绪</span>都告诉我。<br>
-                    DeepSeek 大脑在线断案，绝对（不）公平！
+
+                <!-- 脑洞按钮 -->
+                <div class="mb-8 flex gap-3 justify-center w-full">
+                    <button onclick="feedCat(event)" class="bg-white border-2 border-orange-200 text-orange-500 px-4 py-2 rounded-full text-xs font-bold shadow-sm hover:bg-orange-50 active:scale-95 transition flex items-center gap-1">
+                        <i class="fa-solid fa-fish"></i> 投喂贿赂
+                    </button>
+                    <!-- 修改 1：可爱的不可用提示 -->
+                    <button onclick="fakeUpload()" class="bg-white border-2 border-blue-200 text-blue-500 px-4 py-2 rounded-full text-xs font-bold shadow-sm hover:bg-blue-50 active:scale-95 transition flex items-center gap-1">
+                        <i class="fa-regular fa-image"></i> 上传聊天记录
+                    </button>
+                </div>
+
+                <h2 class="text-3xl cute-font text-gray-800 mb-2">谁的锅？AI 来背！</h2>
+                <p class="text-gray-400 text-xs md:text-sm mb-6 max-w-xs leading-relaxed">
+                    本法庭由 DeepSeek 大脑驱动。<br>绝对公正，除非你给的鱼干够多 (开玩笑)。
                 </p>
 
-                <button onclick="switchView('view-form')" class="group relative px-10 py-4 bg-gray-900 text-white rounded-2xl font-bold text-xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all overflow-hidden">
-                    <div class="absolute inset-0 bg-gradient-to-r from-pink-500 via-purple-500 to-pink-500 opacity-0 group-hover:opacity-100 transition duration-500 bg-[length:200%_auto] animate-gradient"></div>
-                    <span class="relative flex items-center gap-3">
-                        <i class="fa-solid fa-gavel text-pink-300 group-hover:text-white transition"></i>
-                        敲锤开庭
-                    </span>
+                <button onclick="switchView('view-form')" class="w-full md:w-auto px-16 py-4 bg-gray-900 text-white rounded-2xl font-bold text-lg shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 group">
+                    <i class="fa-solid fa-gavel text-pink-400 group-hover:rotate-12 transition"></i> 升堂开庭
                 </button>
-
-                <!-- 底部搞怪链接 -->
-                <div class="absolute bottom-4 flex gap-4 text-[10px] text-gray-400">
-                    <span class="cursor-pointer hover:text-pink-500 hover:underline" onclick="alert('第一条：猫猫永远是对的。')">《猫猫法庭基本法》</span>
-                    <span>•</span>
-                    <span class="cursor-pointer hover:text-pink-500 hover:underline" onclick="alert('建议直接喂罐头解决。')">《情侣吵架紧急预案》</span>
-                    <span>•</span>
-                    <span class="cursor-pointer hover:text-pink-500 hover:underline" onclick="alert('系统检测到你也想吃零食。')">隐私政策</span>
-                </div>
             </div>
 
-            <!-- 2. 表单页 (Jimmy & Linda) -->
-            <div id="view-form" class="absolute inset-0 flex flex-col p-6 translate-x-full transition-transform duration-500 ease-in-out bg-white/40 overflow-y-auto no-scrollbar">
-                
-                <!-- 快速填充区 -->
-                <div class="flex items-center justify-center gap-2 mb-6 overflow-x-auto no-scrollbar py-2">
-                    <span class="text-xs font-bold text-gray-400 mr-2 flex-shrink-0">偷懒模版:</span>
-                    <button onclick="fillCase('snack')" class="flex-shrink-0 bg-white border border-orange-200 text-orange-500 px-3 py-1.5 rounded-full text-xs font-bold hover:bg-orange-50 transition shadow-sm">🍿 零食案</button>
-                    <button onclick="fillCase('photo')" class="flex-shrink-0 bg-white border border-blue-200 text-blue-500 px-3 py-1.5 rounded-full text-xs font-bold hover:bg-blue-50 transition shadow-sm">📸 拍照案</button>
-                    <button onclick="fillCase('msg')" class="flex-shrink-0 bg-white border border-purple-200 text-purple-500 px-3 py-1.5 rounded-full text-xs font-bold hover:bg-purple-50 transition shadow-sm">📱 回信慢</button>
+            <!-- 2. 表单页 -->
+            <div id="view-form" class="absolute inset-0 flex flex-col p-4 md:p-6 translate-x-full transition-transform duration-500 bg-white/60 overflow-y-auto no-scrollbar">
+                <div class="flex gap-2 mb-4 overflow-x-auto no-scrollbar shrink-0 py-1">
+                    <button onclick="fillCase('snack')" class="whitespace-nowrap bg-white border border-pink-200 text-pink-500 px-3 py-1 rounded-full text-xs font-bold shadow-sm">🍿 零食独食</button>
+                    <button onclick="fillCase('photo')" class="whitespace-nowrap bg-white border border-blue-200 text-blue-500 px-3 py-1 rounded-full text-xs font-bold shadow-sm">📸 死亡拍照</button>
+                    <button onclick="fillCase('game')" class="whitespace-nowrap bg-white border border-purple-200 text-purple-500 px-3 py-1 rounded-full text-xs font-bold shadow-sm">🎮 游戏失踪</button>
                 </div>
 
-                <div class="flex flex-col md:flex-row gap-5 pb-24">
-                    <!-- 男方 -->
-                    <div class="flex-1 bg-white p-5 rounded-3xl shadow-sm border-2 border-transparent hover:border-blue-100 transition-all group">
-                        <div class="flex items-center gap-3 mb-4 pb-2 border-b border-gray-100">
-                            <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-500 flex items-center justify-center text-xl group-hover:scale-110 transition">👦</div>
-                            <input id="name-male" type="text" value="Jimmy" class="font-bold text-gray-700 text-lg w-full outline-none bg-transparent placeholder-gray-300" placeholder="男生名字">
+                <div class="flex flex-col md:flex-row gap-4 pb-20">
+                    <div class="flex-1 bg-white p-4 rounded-2xl shadow-sm border border-blue-50 hover:border-blue-200 transition">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="w-8 h-8 rounded-lg bg-blue-100 text-blue-500 flex items-center justify-center font-bold">J</span>
+                            <input id="name-male" type="text" value="Jimmy" class="font-bold text-gray-700 w-full outline-none bg-transparent" placeholder="男生名字">
                         </div>
-                        <div class="space-y-3">
-                            <div>
-                                <label class="text-xs font-bold text-blue-400 uppercase ml-1">事实 (Fact)</label>
-                                <textarea id="fact-male" class="w-full h-20 p-3 mt-1 bg-blue-50/30 rounded-xl text-sm text-gray-600 outline-none focus:bg-blue-50 transition resize-none border border-transparent focus:border-blue-200" placeholder="发生了什么..."></textarea>
-                            </div>
-                            <div>
-                                <label class="text-xs font-bold text-blue-400 uppercase ml-1">委屈 (Feeling)</label>
-                                <textarea id="feel-male" class="w-full h-20 p-3 mt-1 bg-blue-50/30 rounded-xl text-sm text-gray-600 outline-none focus:bg-blue-50 transition resize-none border border-transparent focus:border-blue-200" placeholder="心里怎么想的..."></textarea>
-                            </div>
-                        </div>
+                        <textarea id="fact-male" class="w-full h-16 p-2 bg-blue-50/30 rounded-lg text-sm mb-2 outline-none resize-none placeholder-gray-400 focus:bg-blue-50" placeholder="事实: 发生了什么?"></textarea>
+                        <textarea id="feel-male" class="w-full h-16 p-2 bg-blue-50/30 rounded-lg text-sm outline-none resize-none placeholder-gray-400 focus:bg-blue-50" placeholder="委屈: 心里怎么想?"></textarea>
                     </div>
 
-                    <!-- 女方 -->
-                    <div class="flex-1 bg-white p-5 rounded-3xl shadow-sm border-2 border-transparent hover:border-pink-100 transition-all group">
-                        <div class="flex items-center gap-3 mb-4 pb-2 border-b border-gray-100">
-                            <div class="w-10 h-10 rounded-xl bg-pink-100 text-pink-500 flex items-center justify-center text-xl group-hover:scale-110 transition">👧</div>
-                            <input id="name-female" type="text" value="Linda" class="font-bold text-gray-700 text-lg w-full outline-none bg-transparent placeholder-gray-300" placeholder="女生名字">
+                    <div class="flex-1 bg-white p-4 rounded-2xl shadow-sm border border-pink-50 hover:border-pink-200 transition">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="w-8 h-8 rounded-lg bg-pink-100 text-pink-500 flex items-center justify-center font-bold">L</span>
+                            <input id="name-female" type="text" value="Linda" class="font-bold text-gray-700 w-full outline-none bg-transparent" placeholder="女生名字">
                         </div>
-                        <div class="space-y-3">
-                            <div>
-                                <label class="text-xs font-bold text-pink-400 uppercase ml-1">事实 (Fact)</label>
-                                <textarea id="fact-female" class="w-full h-20 p-3 mt-1 bg-pink-50/30 rounded-xl text-sm text-gray-600 outline-none focus:bg-pink-50 transition resize-none border border-transparent focus:border-pink-200" placeholder="发生了什么..."></textarea>
-                            </div>
-                            <div>
-                                <label class="text-xs font-bold text-pink-400 uppercase ml-1">委屈 (Feeling)</label>
-                                <textarea id="feel-female" class="w-full h-20 p-3 mt-1 bg-pink-50/30 rounded-xl text-sm text-gray-600 outline-none focus:bg-pink-50 transition resize-none border border-transparent focus:border-pink-200" placeholder="心里怎么想的..."></textarea>
-                            </div>
-                        </div>
+                        <textarea id="fact-female" class="w-full h-16 p-2 bg-pink-50/30 rounded-lg text-sm mb-2 outline-none resize-none placeholder-gray-400 focus:bg-pink-50" placeholder="事实: 发生了什么?"></textarea>
+                        <textarea id="feel-female" class="w-full h-16 p-2 bg-pink-50/30 rounded-lg text-sm outline-none resize-none placeholder-gray-400 focus:bg-pink-50" placeholder="委屈: 心里怎么想?"></textarea>
                     </div>
                 </div>
 
-                <!-- 提交按钮 -->
-                <div class="absolute bottom-6 left-0 right-0 flex justify-center z-20 pointer-events-none">
-                    <button onclick="submitToAI(event)" class="pointer-events-auto px-10 py-3 bg-gray-900 text-white rounded-full font-bold shadow-lg hover:bg-black hover:scale-105 transition-all flex items-center gap-2 group">
-                        <span>提交审判</span>
-                        <i class="fa-solid fa-paper-plane text-pink-400 group-hover:translate-x-1 transition-transform"></i>
+                <div class="absolute bottom-4 left-4 right-4 md:left-6 md:right-6">
+                    <button onclick="submitToAI()" class="w-full py-3.5 bg-gradient-to-r from-gray-800 to-black text-white rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-transform">
+                        <span>提交给法官</span> <i class="fa-solid fa-paper-plane text-xs text-pink-300"></i>
                     </button>
                 </div>
             </div>
 
-            <!-- 3. Loading (猫猫思考) -->
-            <div id="view-loading" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-white/90 z-50 backdrop-blur-sm">
-                <div class="relative w-32 h-32 mb-6">
-                    <div class="absolute inset-0 rounded-full border-4 border-gray-100"></div>
-                    <div class="absolute inset-0 rounded-full border-4 border-pink-500 border-t-transparent animate-spin"></div>
-                    <img src="https://api.dicebear.com/9.x/avataaars/svg?seed=Felix&backgroundColor=transparent&clothing=collar&eyes=happy&mouth=smile" class="absolute inset-0 p-4 animate-pulse">
+            <!-- 3. Loading -->
+            <div id="view-loading" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-white/95 z-50 p-8 text-center backdrop-blur-md">
+                <div class="relative w-20 h-20 mb-6">
+                    <div class="absolute w-full h-full border-4 border-gray-100 rounded-full"></div>
+                    <div class="absolute w-full h-full border-4 border-pink-500 border-t-transparent rounded-full animate-spin"></div>
+                    <i class="fa-solid fa-paw absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-2xl text-pink-300 animate-pulse"></i>
                 </div>
-                <h3 class="text-2xl cute-font text-gray-800 mb-2">正在连接喵星云端...</h3>
-                <div id="ai-log" class="text-xs font-mono text-pink-400 h-6 overflow-hidden">> DeepSeek 正在阅读供词...</div>
+                <h3 class="text-xl cute-font text-gray-800 mb-2">DeepSeek 正在翻阅卷宗...</h3>
+                <div id="ai-log" class="text-[10px] text-gray-400 bg-gray-50 px-3 py-1 rounded-full border border-gray-100 font-mono">
+                    > 正在连接喵星服务器...
+                </div>
             </div>
 
-            <!-- 4. 判决结果页 -->
-            <div id="view-result" class="absolute inset-0 flex flex-col p-6 translate-x-full transition-transform duration-500 bg-white/50 overflow-y-auto no-scrollbar">
-                
-                <!-- 结果头部 -->
-                <div class="text-center mb-6 relative">
-                    <div class="inline-block bg-gradient-to-r from-red-500 to-pink-500 text-white px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest shadow-md transform -rotate-2">
-                        Verdict Reached
-                    </div>
-                    <h2 id="result-title" class="text-3xl cute-font text-gray-800 mt-3 drop-shadow-sm">案件标题生成中...</h2>
+            <!-- 4. 结果页 -->
+            <div id="view-result" class="absolute inset-0 flex flex-col p-4 md:p-6 translate-x-full transition-transform duration-500 bg-white/50 overflow-y-auto no-scrollbar">
+                <div class="text-center mb-4">
+                    <h2 id="result-title" class="text-2xl cute-font text-gray-800 leading-tight drop-shadow-sm">...</h2>
                 </div>
 
-                <!-- 责任 PK 条 -->
-                <div class="bg-white p-5 rounded-[2rem] shadow-sm border border-white mb-6">
-                    <div class="flex justify-between text-xs font-bold text-gray-400 mb-2 uppercase px-2">
-                        <span id="label-male">Jimmy</span>
-                        <span id="label-female">Linda</span>
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-white mb-4">
+                    <div class="flex justify-between items-end mb-2 px-1">
+                        <span class="text-xs font-bold text-gray-500" id="label-male">Jimmy</span>
+                        <span class="text-[10px] text-pink-400 bg-pink-50 px-2 rounded border border-pink-100">📊 责任指数</span>
+                        <span class="text-xs font-bold text-gray-500" id="label-female">Linda</span>
                     </div>
-                    <div class="relative h-12 w-full bg-gray-100 rounded-full overflow-hidden flex font-bold text-white text-lg shadow-inner">
-                        <div id="bar-male" class="bg-blue-400 flex items-center justify-center transition-all duration-1000 w-1/2 relative overflow-hidden">
-                            <span class="relative z-10">50%</span>
-                            <div class="absolute inset-0 bg-white/20 -skew-x-12 translate-x-full animate-[shimmer_2s_infinite]"></div>
-                        </div>
-                        <div id="bar-female" class="bg-pink-400 flex items-center justify-center transition-all duration-1000 w-1/2 relative overflow-hidden">
-                            <span class="relative z-10">50%</span>
-                            <div class="absolute inset-0 bg-white/20 -skew-x-12 translate-x-full animate-[shimmer_2s_infinite]"></div>
-                        </div>
-                        <!-- 中间 VS 徽章 -->
-                        <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-full w-12 h-12 flex items-center justify-center text-yellow-500 shadow-md border-4 border-gray-50 z-10">
-                            <i class="fa-solid fa-gavel text-xl"></i>
-                        </div>
+                    <div class="relative h-10 w-full bg-gray-100 rounded-full overflow-hidden flex font-bold text-white text-sm">
+                        <div id="bar-male" class="flex items-center justify-center transition-all duration-1000 w-[50%]"><span>50%</span></div>
+                        <div id="bar-female" class="flex items-center justify-center transition-all duration-1000 w-[50%]"><span>50%</span></div>
+                        <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-full w-8 h-8 flex items-center justify-center text-gray-300 border-2 border-gray-50 z-10 text-[10px] font-black">VS</div>
                     </div>
                 </div>
 
-                <!-- 结果内容卡片 -->
-                <div class="space-y-4 pb-24">
-                    <!-- 分析 -->
-                    <div class="bg-white/80 p-5 rounded-2xl border border-pink-50 shadow-sm relative overflow-hidden">
+                <div class="space-y-4 pb-20">
+                    <div class="bg-white/80 p-4 rounded-xl border border-pink-50 shadow-sm relative overflow-hidden">
                         <div class="absolute top-0 left-0 w-1 h-full bg-pink-400"></div>
-                        <h3 class="text-pink-600 font-bold mb-3 flex items-center gap-2">
-                            <i class="fa-solid fa-glasses"></i> 喵星人锐评
-                        </h3>
-                        <div id="result-analysis" class="text-sm text-gray-600 leading-7 text-justify markdown-body"></div>
+                        <h3 class="text-sm font-bold text-pink-600 mb-2"><i class="fa-solid fa-cat"></i> 喵星判词</h3>
+                        <div id="result-analysis" class="text-sm text-gray-600 leading-6 text-justify"></div>
                     </div>
 
-                    <!-- 任务 -->
-                    <div class="bg-yellow-50 p-5 rounded-2xl border border-yellow-100 shadow-sm">
-                        <h3 class="text-yellow-700 font-bold mb-3 flex items-center gap-2">
-                            <i class="fa-solid fa-list-check"></i> 强制执行清单
-                        </h3>
-                        <div id="result-tasks" class="space-y-3"></div>
+                    <div class="bg-yellow-50 p-4 rounded-xl border border-yellow-100 shadow-sm">
+                        <h3 class="text-sm font-bold text-yellow-700 mb-2"><i class="fa-solid fa-list-ul"></i> 强制和解清单</h3>
+                        <div id="result-tasks" class="space-y-2"></div>
                     </div>
+
+                    <!-- 修改 2：复制文案按钮（带修复逻辑） -->
+                    <button onclick="generateCopy()" class="w-full py-2 border-2 border-dashed border-gray-300 text-gray-400 rounded-xl text-xs font-bold hover:border-pink-300 hover:text-pink-500 transition flex items-center justify-center gap-1">
+                        <i class="fa-regular fa-copy"></i> 一键生成《给对象的认错/谅解书》
+                    </button>
                 </div>
 
-                <!-- 底部操作 -->
-                <div class="absolute bottom-6 left-0 right-0 flex justify-center z-20 pointer-events-none">
-                    <button onclick="switchView('view-restore')" class="pointer-events-auto px-8 py-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full font-bold shadow-lg hover:shadow-pink-300/50 hover:-translate-y-1 transition-all animate-bounce">
-                        接受判决 & 和好 <i class="fa-solid fa-heart ml-1"></i>
+                <div class="absolute bottom-4 left-4 right-4 md:bottom-6 md:left-6 md:right-6">
+                    <button onclick="switchView('view-restore')" class="w-full py-3 bg-pink-500 text-white rounded-xl font-bold shadow-lg hover:bg-pink-600 active:scale-95 transition-all">
+                        接受判决 & 去和好 <i class="fa-solid fa-heart ml-1"></i>
                     </button>
                 </div>
             </div>
 
-            <!-- 5. 修复关系页 -->
+            <!-- 5. 修复页 -->
             <div id="view-restore" class="absolute inset-0 flex flex-col items-center justify-center p-6 translate-x-full transition-transform duration-500 bg-white/90">
-                <h2 class="text-3xl cute-font text-gray-800 mb-2">💖 关系修复仪</h2>
-                <p class="text-gray-400 text-sm mb-8">别怄气啦，给个台阶下吧！</p>
-
-                <!-- 温度计 -->
-                <div class="relative w-28 h-64 bg-gray-100 rounded-full border-4 border-white shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] flex flex-col justify-end overflow-hidden mb-6">
-                    <div id="liquid" class="w-full bg-blue-400 transition-all duration-700 relative flex items-start justify-center pt-2" style="height: 30%">
-                        <div class="w-full h-full opacity-30 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiPgo8cmVjdCB3aWR0aD0iOCIgaGVpZ2h0PSI4IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMiIvPjwvc3ZnPg==')]"></div>
-                    </div>
-                    <!-- 刻度线 -->
-                    <div class="absolute top-1/4 w-full h-px bg-gray-300 left-0"></div>
-                    <div class="absolute top-2/4 w-full h-px bg-gray-300 left-0"></div>
-                    <div class="absolute top-3/4 w-full h-px bg-gray-300 left-0"></div>
+                <h2 class="text-2xl cute-font text-gray-800 mb-1">💖 爱情回温仪</h2>
+                <p class="text-gray-400 text-xs mb-8">做点任务，让温度升起来！</p>
+                <div class="relative w-20 h-56 bg-gray-100 rounded-full border-4 border-white shadow-inner flex flex-col justify-end overflow-hidden mb-6">
+                    <div id="liquid" class="w-full bg-blue-400 transition-all duration-700 relative" style="height: 30%"></div>
+                    <div class="absolute w-full h-px bg-gray-300 top-1/4 opacity-50"></div>
+                    <div class="absolute w-full h-px bg-gray-300 top-2/4 opacity-50"></div>
+                    <div class="absolute w-full h-px bg-gray-300 top-3/4 opacity-50"></div>
                 </div>
-
-                <div id="temp-val" class="text-5xl font-black text-blue-400 cute-font mb-8 transition-colors">30°C</div>
-
-                <div class="grid grid-cols-2 gap-3 w-full max-w-sm">
-                    <button onclick="addHeat(20)" class="bg-white border-2 border-pink-50 hover:border-pink-300 p-3 rounded-xl text-sm font-bold text-gray-600 hover:bg-pink-50 transition active:scale-95">
-                        🥤 请喝奶茶
-                    </button>
-                    <button onclick="addHeat(30)" class="bg-white border-2 border-pink-50 hover:border-pink-300 p-3 rounded-xl text-sm font-bold text-gray-600 hover:bg-pink-50 transition active:scale-95">
-                        🤝 握手言和
-                    </button>
-                    <button onclick="addHeat(40)" class="col-span-2 bg-gradient-to-r from-pink-100 to-purple-100 border-2 border-white hover:shadow-md p-3 rounded-xl text-sm font-bold text-pink-600 transition active:scale-95">
-                        😘 亲亲抱抱举高高 (大招)
-                    </button>
+                <div id="temp-val" class="text-4xl font-black text-blue-400 cute-font mb-8">30°C</div>
+                <div class="grid grid-cols-2 gap-3 w-full">
+                    <button onclick="addHeat(20)" class="bg-white border p-3 rounded-xl text-xs font-bold text-gray-600 active:scale-95">🥤 请喝奶茶</button>
+                    <button onclick="addHeat(30)" class="bg-white border p-3 rounded-xl text-xs font-bold text-gray-600 active:scale-95">🤝 握手言和</button>
+                    <button onclick="addHeat(40)" class="col-span-2 bg-pink-50 border border-pink-200 p-3 rounded-xl text-xs font-bold text-pink-600 active:scale-95">😘 亲亲抱抱 (大招)</button>
                 </div>
-
-                <button onclick="resetApp()" class="mt-10 text-gray-400 hover:text-pink-500 text-xs underline decoration-dotted">
-                    再判一个新案子
-                </button>
+                <button onclick="resetApp()" class="mt-8 text-gray-400 text-xs underline">再判一个</button>
             </div>
 
         </main>
     </div>
 
-    <!-- 逻辑代码 -->
+    <!-- 逻辑脚本 -->
     <script>
-        // --- 核心配置 ---
-        // 注意：这是为了演示，实际项目请勿将 Key 暴露
+        // === 配置 ===
         let DEEPSEEK_API_KEY = "sk-9bc8bb993b684218803e58cdeac07d12"; 
         const API_URL = "https://api.deepseek.com/chat/completions";
 
-        // --- 1. 点击特效 (猫爪) ---
-        function createPaw(e) {
-            // 如果点击的是按钮或输入框，不生成猫爪，避免遮挡
-            if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        // === 1. 投喂功能 ===
+        let bribeCount = 0;
+        function feedCat(e) {
+            bribeCount++;
+            const counter = document.getElementById('bribe-counter');
+            counter.style.transform = 'scale(1)';
+            counter.querySelector('span').innerText = bribeCount;
 
-            const paw = document.createElement('div');
-            paw.classList.add('paw-print');
-            paw.style.left = e.clientX + 'px';
-            paw.style.top = e.clientY + 'px';
-            
-            // 随机旋转一点角度
-            const randomRot = Math.random() * 40 - 20; 
-            paw.style.transform = `translate(-50%, -50%) scale(0.5) rotate(${randomRot}deg)`;
+            const fish = document.createElement('div');
+            fish.innerHTML = '<i class="fa-solid fa-fish text-orange-400"></i>';
+            fish.className = 'fish-item';
+            const btnRect = e.target.getBoundingClientRect();
+            fish.style.left = (btnRect.left + btnRect.width/2) + 'px';
+            fish.style.top = (btnRect.top) + 'px';
+            const catRect = document.getElementById('cat-container').getBoundingClientRect();
+            const targetX = (catRect.left + catRect.width/2) - parseFloat(fish.style.left);
+            const targetY = (catRect.top + catRect.height/2) - parseFloat(fish.style.top);
+            fish.style.setProperty('--tx', `${targetX}px`);
+            fish.style.setProperty('--ty', `${targetY}px`);
+            document.body.appendChild(fish);
+            setTimeout(() => fish.remove(), 800);
 
-            document.body.appendChild(paw);
-
-            // 动画结束后移除
-            setTimeout(() => {
-                paw.remove();
-            }, 1000);
+            if(bribeCount === 5) alert("猫猫悄悄告诉你：给得多，判得轻（假的）🤫");
         }
 
-        // --- 2. 戳猫猫互动 ---
-        const catQuotes = [
-            "别戳了，再戳要收费了！🐟",
-            "本官正在午休，有事起奏。",
-            "你这个案子，很难评...",
-            "再戳我就判你输哦！",
-            "记得给我带小鱼干~"
-        ];
-        function pokeCat(e) {
-            e.stopPropagation(); // 防止触发全局猫爪
-            const bubble = document.getElementById('cat-bubble');
-            const img = document.getElementById('cat-img');
-            
-            // 随机语录
-            bubble.innerText = catQuotes[Math.floor(Math.random() * catQuotes.length)];
-            
-            // 动画
-            bubble.classList.add('show-bubble');
-            img.style.transform = "scale(0.9) rotate(-5deg)";
-            
-            setTimeout(() => {
-                bubble.classList.remove('show-bubble');
-                img.style.transform = ""; // 复原
-            }, 2000);
+        // === 2. 修正版：假上传 (傲娇文案) ===
+        function fakeUpload() {
+            // 这里修改了文案！
+            alert("🐱 喵呜？\n该功能暂未开放！！！\n除非...你现在就去点旁边的「投喂贿赂」多给我几条小鱼干！🐟");
         }
 
-        // --- 3. 视图导航 ---
+        // === 3. 修正版：复制文案 (带兼容性修复) ===
+        function generateCopy() {
+            const nm = document.getElementById('name-male').value || "Jimmy";
+            const nf = document.getElementById('name-female').value || "Linda";
+            const text = `【猫猫法庭判决书】\n经过 AI 大法官审理，关于 ${nm} 和 ${nf} 的案件已有定论。为了维护世界和平，我决定执行判决：亲亲抱抱举高高！\n(本判决为终审判决，立即执行)`;
+            
+            // 优先尝试标准 API
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(() => {
+                    alert("✅ 文案已复制！快去发给 TA！📱");
+                }).catch(err => {
+                    // 如果标准API失败，尝试兼容模式
+                    fallbackCopyTextToClipboard(text);
+                });
+            } else {
+                // 如果环境不支持标准API（如本地文件打开），直接用兼容模式
+                fallbackCopyTextToClipboard(text);
+            }
+        }
+
+        // 兼容模式复制函数 (确保本地文件也能用)
+        function fallbackCopyTextToClipboard(text) {
+            var textArea = document.createElement("textarea");
+            textArea.value = text;
+            // 避免滚动到底部
+            textArea.style.top = "0";
+            textArea.style.left = "0";
+            textArea.style.position = "fixed";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+
+            try {
+                var successful = document.execCommand('copy');
+                var msg = successful ? '✅ 文案已复制！快去发给 TA！📱' : '❌ 复制失败，请手动截图。';
+                alert(msg);
+            } catch (err) {
+                alert('❌ 无法复制，请手动截图。');
+            }
+            document.body.removeChild(textArea);
+        }
+
+        // === 视图导航 ===
         function switchView(viewId) {
             const views = ['view-landing', 'view-form', 'view-result', 'view-restore'];
-            const elements = views.map(id => document.getElementById(id));
             const btnBack = document.getElementById('btn-back');
-
-            elements.forEach(el => {
-                if (el.id === viewId) {
-                    el.style.transform = 'translateX(0)';
-                } else {
-                    // 简单的逻辑：如果目标在当前视图序列之后，当前往左移，反之往右
-                    // 这里为了简单，除了 landing，其他默认在右侧，显示时移入
-                    el.style.transform = 'translateX(100%)';
-                }
+            views.forEach(id => {
+                const el = document.getElementById(id);
+                if(id === viewId) el.style.transform = 'translateX(0)';
+                else el.style.transform = 'translateX(100%)';
             });
-
-            // 特殊处理 landing
-            if (viewId === 'view-landing') {
+            if(viewId === 'view-landing') {
                 document.getElementById('view-form').style.transform = 'translateX(100%)';
-                document.getElementById('view-result').style.transform = 'translateX(100%)';
-                document.getElementById('view-restore').style.transform = 'translateX(100%)';
                 btnBack.classList.add('hidden');
             } else {
                 document.getElementById('view-landing').style.transform = 'translateX(-100%)';
                 if(viewId !== 'view-restore') btnBack.classList.remove('hidden');
             }
         }
-
         function goBack() { switchView('view-landing'); }
 
-        // --- 4. 预设填充 ---
+        // === 预设填充 ===
         const presets = {
-            snack: { j_f: "我买了一包薯片，看球赛时不知不觉吃完了。", j_e: "我当时太投入了，而且平时我也给她买零食啊，至于因为一包薯片生气吗？", l_f: "他吃独食，问都没问我一句，包装袋直接扔垃圾桶。", l_e: "不是想吃薯片，是觉得他心里根本没有我，这种自私的行为让我很寒心。" },
-            photo: { j_f: "去公园玩，我给她拍了五十多张照片，她一张都不满意。", j_e: "我觉得光线构图都挺好的，真实的她就很美啊，非要修成网红脸。", l_f: "把我拍得又矮又胖，全是双下巴和闭眼照。", l_e: "让他学一下构图很难吗？敷衍了事，根本不重视我们的约会回忆。" },
-            msg: { j_f: "打王者荣耀晋级赛，没切出去回消息。", j_e: "团战关键时刻怎么回？我就晚回了15分钟而已。", l_f: "发消息两个小时不回，结果看他在发朋友圈点赞。", l_e: "有时间点赞没时间回我？这就是冷暴力！" }
+            snack: { j_f: "买了一包薯片自己吃完了。", j_e: "太饿了没忍住，平时也没少给她买啊。", l_f: "他吃独食，一口没留。", l_e: "不是薯片的问题，是心里没我。" },
+            photo: { j_f: "拍了50张都不满意。", j_e: "我觉得挺真实的，她非要修图。", l_f: "拍得像一米五，全是死角。", l_e: "完全在敷衍，根本不用心。" },
+            game: { j_f: "团战没回消息。", j_e: "游戏不能暂停啊！", l_f: "失踪两小时不回。", l_e: "手机在手边都不回，冷暴力。" }
         };
-        function fillCase(type) {
-            const d = presets[type];
+        function fillCase(t) {
+            const d = presets[t];
             document.getElementById('fact-male').value = d.j_f;
             document.getElementById('feel-male').value = d.j_e;
             document.getElementById('fact-female').value = d.l_f;
             document.getElementById('feel-female').value = d.l_e;
         }
 
-        // --- 5. AI 提交逻辑 ---
-        async function submitToAI(e) {
-            e.stopPropagation();
+        // === API 提交 ===
+        async function submitToAI() {
             const nm = document.getElementById('name-male').value || "Jimmy";
             const nf = document.getElementById('name-female').value || "Linda";
             const fm = document.getElementById('fact-male').value;
@@ -472,47 +380,39 @@
             const ff = document.getElementById('fact-female').value;
             const ef = document.getElementById('feel-female').value;
 
-            if ((!fm && !em) || (!ff && !ef)) {
-                alert("请至少输入一些内容，猫猫无法审判空气！🐱");
-                return;
-            }
+            if((!fm && !em) || (!ff && !ef)) { alert("猫猫无法审判空气！😿"); return; }
 
-            // Show Loading
             document.getElementById('view-loading').classList.remove('hidden');
             const log = document.getElementById('ai-log');
-
-            const prompt = `你是一只“猫猫大法官”，性格幽默、毒舌但公正。请分析情侣吵架：
+            
+            const prompt = `你是一只可爱毒舌的猫猫法官。分析情侣吵架：
             男方(${nm}): 事实[${fm}], 委屈[${em}]。
             女方(${nf}): 事实[${ff}], 委屈[${ef}]。
-            
-            请返回纯JSON，不要Markdown格式，包含：
-            title (好笑的标题),
-            score_male (男方责任0-100),
-            score_female (女方责任,合计100),
-            analysis (幽默深刻的分析,300字内),
-            tasks (3个具体的和解任务数组)。`;
+            返回JSON(无markdown):
+            1. title: 有趣标题
+            2. score_male: 男方责任(0-100)
+            3. score_female: 女方责任(合计100)
+            4. analysis: 幽默分析
+            5. tasks: 3个和解任务`;
 
             try {
-                log.innerText = "> 正在加密传输至 DeepSeek...";
+                log.innerText = "> 发送至 DeepSeek...";
                 const res = await fetch(API_URL, {
                     method: "POST",
                     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${DEEPSEEK_API_KEY}` },
                     body: JSON.stringify({
                         model: "deepseek-chat",
-                        messages: [{role: "system", content: "You are a helpful assistant outputting JSON."}, {role: "user", content: prompt}],
+                        messages: [{role:"system", content:"Output JSON only."}, {role:"user", content:prompt}],
                         stream: false
                     })
                 });
-
-                if (!res.ok) throw new Error("API连接失败");
+                if(!res.ok) throw new Error("API Error");
                 const data = await res.json();
-                let content = data.choices[0].message.content.replace(/```json/g, "").replace(/```/g, "").trim();
-                const json = JSON.parse(content);
-                renderResult(json, nm, nf);
-
-            } catch (err) {
-                console.error(err);
-                log.innerText = "> 网络波动，启用本地猫粮...";
+                let content = data.choices[0].message.content.replace(/```json/g,"").replace(/```/g,"").trim();
+                renderResult(JSON.parse(content), nm, nf);
+            } catch(e) {
+                console.error(e);
+                log.innerText = "> 网络拥堵，启用本地剧本...";
                 setTimeout(() => useOffline(nm, nf), 1500);
             }
         }
@@ -520,26 +420,32 @@
         function renderResult(data, nm, nf) {
             document.getElementById('view-loading').classList.add('hidden');
             document.getElementById('result-title').innerText = data.title;
+            
             document.getElementById('label-male').innerText = nm;
             document.getElementById('label-female').innerText = nf;
+
+            const sm = data.score_male;
+            const sf = data.score_female;
             
-            // 进度条动画
-            setTimeout(() => {
-                document.getElementById('bar-male').style.width = data.score_male + "%";
-                document.getElementById('bar-male').querySelector('span').innerText = data.score_male + "%";
-                document.getElementById('bar-female').style.width = data.score_female + "%";
-                document.getElementById('bar-female').querySelector('span').innerText = data.score_female + "%";
-            }, 100);
+            const bm = document.getElementById('bar-male');
+            bm.style.width = sm + "%";
+            bm.className = `flex items-center justify-center transition-all duration-1000 ${sm>50?'bg-red-400':'bg-blue-400'}`;
+            bm.innerHTML = `<span>${sm}%</span>`;
+
+            const bf = document.getElementById('bar-female');
+            bf.style.width = sf + "%";
+            bf.className = `flex items-center justify-center transition-all duration-1000 ${sf>50?'bg-red-400':'bg-blue-400'}`;
+            bf.innerHTML = `<span>${sf}%</span>`;
 
             document.getElementById('result-analysis').innerHTML = marked.parse(data.analysis);
             
-            const taskHtml = data.tasks.map((t, i) => `
-                <div class="flex items-start gap-3 bg-white p-3 rounded-xl border border-yellow-100">
-                    <span class="bg-yellow-400 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">${i+1}</span>
-                    <span class="text-sm text-gray-600">${t}</span>
-                </div>`).join('');
-            document.getElementById('result-tasks').innerHTML = taskHtml;
-            
+            document.getElementById('result-tasks').innerHTML = data.tasks.map((t,i)=>`
+                <div class="flex gap-3 bg-white p-2 rounded-lg border border-yellow-50">
+                    <span class="bg-yellow-400 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">${i+1}</span>
+                    <span class="text-xs text-gray-600">${t}</span>
+                </div>
+            `).join('');
+
             switchView('view-result');
         }
 
@@ -547,60 +453,39 @@
             renderResult({
                 title: "信号丢失的罗生门",
                 score_male: 50, score_female: 50,
-                analysis: "虽然本喵与 DeepSeek 母星失联，但根据经验：公说公有理，婆说婆有理。男方觉得是小事，女方觉得是态度。这种时候，谁先低头谁就赢了（指赢得对方的心）。",
-                tasks: [`${nm} 立刻给 ${nf} 发一个红包。`, "两人对视10秒不准笑。", "一起点份外卖吃。"]
+                analysis: "猫猫与母星失联！暂判平局。公说公有理，婆说婆有理，建议亲亲解决。",
+                tasks: ["发个表情包。", "握手言和。", "谁先笑谁请客。"]
             }, nm, nf);
         }
 
-        // --- 6. 温度计与彩带 ---
+        // === 温度计 ===
         let heat = 30;
         function addHeat(val) {
             heat = Math.min(100, heat + val);
             const l = document.getElementById('liquid');
             const t = document.getElementById('temp-val');
-            
             l.style.height = heat + "%";
             t.innerText = heat + "°C";
-
-            if (heat < 60) {
-                l.className = "w-full bg-blue-400 transition-all duration-700 relative pt-2 flex justify-center";
-                t.className = "text-5xl font-black text-blue-400 cute-font mb-8 transition-colors";
-            } else if (heat < 90) {
-                l.className = "w-full bg-pink-400 transition-all duration-700 relative pt-2 flex justify-center";
-                t.className = "text-5xl font-black text-pink-400 cute-font mb-8 transition-colors";
-            } else {
-                l.className = "w-full bg-red-500 transition-all duration-700 relative pt-2 flex justify-center";
-                t.className = "text-5xl font-black text-red-500 cute-font mb-8 transition-colors animate-bounce";
-                confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#F472B6', '#FBBF24'] });
-            }
+            
+            if(heat < 60) { l.className="w-full bg-blue-400 transition-all duration-700 relative"; t.className="text-4xl font-black text-blue-400 cute-font mb-8 transition-colors"; }
+            else if(heat < 90) { l.className="w-full bg-pink-400 transition-all duration-700 relative"; t.className="text-4xl font-black text-pink-400 cute-font mb-8 transition-colors"; }
+            else { l.className="w-full bg-red-500 transition-all duration-700 relative"; t.className="text-4xl font-black text-red-500 cute-font mb-8 transition-colors animate-bounce"; confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); }
         }
 
         function resetApp() {
             heat = 30;
             document.getElementById('liquid').style.height = "30%";
-            document.getElementById('liquid').className = "w-full bg-blue-400 transition-all duration-700 relative pt-2 flex justify-center";
+            document.getElementById('liquid').className = "w-full bg-blue-400 transition-all duration-700 relative";
             document.getElementById('temp-val').innerText = "30°C";
-            document.getElementById('temp-val').className = "text-5xl font-black text-blue-400 cute-font mb-8 transition-colors";
-            
-            document.getElementById('name-male').value = "Jimmy";
-            document.getElementById('name-female').value = "Linda";
-            document.getElementById('fact-male').value = "";
-            document.getElementById('feel-male').value = "";
-            document.getElementById('fact-female').value = "";
-            document.getElementById('feel-female').value = "";
-            
+            document.getElementById('fact-male').value=""; document.getElementById('feel-male').value="";
+            document.getElementById('fact-female').value=""; document.getElementById('feel-female').value="";
+            bribeCount = 0; document.getElementById('bribe-counter').style.transform = 'scale(0)';
             switchView('view-landing');
         }
 
-        // --- 设置 ---
-        function toggleSettings() { 
-            document.getElementById('settings-panel').classList.toggle('hidden'); 
-            document.getElementById('api-key-input').value = DEEPSEEK_API_KEY;
-        }
-        function saveSettings() {
-            const v = document.getElementById('api-key-input').value;
-            if(v) { DEEPSEEK_API_KEY = v; alert('配置已保存'); toggleSettings(); }
-        }
+        // === 设置 ===
+        function toggleSettings() { document.getElementById('settings-panel').classList.toggle('hidden'); document.getElementById('api-key-input').value = DEEPSEEK_API_KEY; }
+        function saveSettings() { const v=document.getElementById('api-key-input').value; if(v){DEEPSEEK_API_KEY=v; alert('Key Updated'); toggleSettings();} }
     </script>
 </body>
 </html>
