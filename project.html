@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Symphony of Words | AI Generative Music</title>
+    
+    <!-- Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;1,400&family=Roboto+Mono:wght@300;500&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --accent: #d4af37; /* Default Gold */
+            --text: #e0e0e0;
+            --glass: rgba(20, 20, 20, 0.8);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Roboto Mono', monospace;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* --- UI LAYER --- */
+        #ui-container {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.5s;
+        }
+
+        .composer-box {
+            pointer-events: auto;
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            padding: 40px;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 4px;
+            width: 400px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 32px;
+            margin-bottom: 10px;
+            font-style: italic;
+            color: var(--accent);
+        }
+
+        p { font-size: 12px; color: #888; margin-bottom: 30px; }
+
+        /* Inputs */
+        .input-group { margin-bottom: 20px; text-align: left; }
+        label { font-size: 10px; text-transform: uppercase; color: #666; display: block; margin-bottom: 5px; }
+        
+        input[type="text"] {
+            width: 100%;
+            background: rgba(255,255,255,0.05);
+            border: none;
+            border-bottom: 1px solid #444;
+            color: #fff;
+            padding: 10px;
+            font-family: inherit;
+            font-size: 16px;
+            outline: none;
+            transition: border 0.3s;
+        }
+        input:focus { border-bottom-color: var(--accent); }
+
+        /* Style Selector */
+        .style-options { display: flex; gap: 10px; margin-bottom: 30px; }
+        .style-btn {
+            flex: 1;
+            padding: 10px;
+            background: transparent;
+            border: 1px solid #444;
+            color: #888;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+        .style-btn:hover { border-color: #fff; color: #fff; }
+        .style-btn.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: bold; }
+
+        /* Main Button */
+        .compose-btn {
+            width: 100%;
+            padding: 15px;
+            background: #fff;
+            color: #000;
+            border: none;
+            font-weight: bold;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .compose-btn:hover { transform: scale(1.02); }
+
+        /* --- PLAYING UI (Hidden initially) --- */
+        #playing-ui {
+            position: absolute;
+            bottom: 40px;
+            width: 100%;
+            text-align: center;
+            z-index: 10;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 1s;
+        }
+        .song-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 24px;
+            color: var(--accent);
+        }
+        .song-meta { font-size: 12px; color: #666; margin-top: 5px; }
+        
+        #stop-btn {
+            pointer-events: auto;
+            margin-top: 20px;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.3);
+            color: #fff;
+            padding: 8px 20px;
+            font-size: 10px;
+            cursor: pointer;
+        }
+        #stop-btn:hover { background: white; color: black; }
+
+        /* Canvas */
+        #canvas-container {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- UI: Input Form -->
+    <div id="ui-container">
+        <div class="composer-box">
+            <h1>Symphony of Words</h1>
+            <p>AI-Driven Text-to-Music Generation</p>
+
+            <div class="input-group">
+                <label>1. Enter Title / Theme</label>
+                <input type="text" id="user-text" placeholder="e.g. Moonlight, Chaos, The Ocean..." value="Final Project 2025">
+            </div>
+
+            <div class="input-group">
+                <label>2. Select Artistic Style</label>
+                <div class="style-options">
+                    <button class="style-btn active" onclick="selectStyle('CLASSICAL', this)">Classical</button>
+                    <button class="style-btn" onclick="selectStyle('JAZZ', this)">Jazz</button>
+                    <button class="style-btn" onclick="selectStyle('CYBER', this)">Cyber</button>
+                </div>
+            </div>
+
+            <button class="compose-btn" onclick="startComposition()">COMPOSE & PERFORM</button>
+        </div>
+    </div>
+
+    <!-- UI: Playing State -->
+    <div id="playing-ui">
+        <div class="song-title" id="display-title">Untitled</div>
+        <div class="song-meta">AI Composition in <span id="display-key">C Major</span> | Tempo: <span id="display-bpm">120</span> BPM</div>
+        <button id="stop-btn" onclick="resetSystem()">STOP PERFORMANCE</button>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script>
+        // --- CONFIGURATION ---
+        let currentStyle = 'CLASSICAL';
+        let isPlaying = false;
+        let seed = 0;
+        
+        // Music & Visual Objects
+        let synth, loop;
+        let notes = []; // Visual notes
+        let staffY = []; // Sheet music lines
+
+        // --- SETUP ---
+        function setup() {
+            let cnv = createCanvas(windowWidth, windowHeight);
+            cnv.parent('canvas-container');
+            colorMode(HSB, 360, 100, 100, 1);
+            
+            // Init Staff Lines positions
+            let centerY = height / 2;
+            for(let i=-2; i<=2; i++) {
+                staffY.push(centerY + i * 20);
+            }
+        }
+
+        function draw() {
+            // 1. Dynamic Background based on Style
+            if (currentStyle === 'CLASSICAL') {
+                background(30, 10, 10, 0.2); // Warm Dark
+            } else if (currentStyle === 'JAZZ') {
+                background(230, 30, 10, 0.2); // Dark Blue/Purple
+            } else {
+                background(0, 0, 5, 0.3); // Black (Cyber)
+            }
+
+            // 2. Draw The Staff (Living Score)
+            drawScore();
+
+            // 3. Draw Notes
+            for (let i = notes.length - 1; i >= 0; i--) {
+                notes[i].update();
+                notes[i].display();
+                if (notes[i].isDead()) notes.splice(i, 1);
+            }
+        }
+
+        // --- CORE AI LOGIC: Text to Music ---
+        
+        // 1. Hash Function: Turns string into a reproducible number
+        function stringToSeed(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                let char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; // Convert to 32bit integer
+            }
+            return Math.abs(hash);
+        }
+
+        // 2. Pseudo-Random Number Generator (seeded)
+        function seededRandom() {
+            let x = Math.sin(seed++) * 10000;
+            return x - Math.floor(x);
+        }
+
+        // --- INTERACTION ---
+
+        function selectStyle(style, btn) {
+            currentStyle = style;
+            document.querySelectorAll('.style-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            // Update CSS variables for theme
+            const root = document.documentElement;
+            if(style === 'CLASSICAL') root.style.setProperty('--accent', '#d4af37');
+            if(style === 'JAZZ') root.style.setProperty('--accent', '#7b68ee');
+            if(style === 'CYBER') root.style.setProperty('--accent', '#00f2ff');
+        }
+
+        async function startComposition() {
+            const text = document.getElementById('user-text').value;
+            if(!text) return alert("Please enter a title.");
+
+            // Initialize Audio
+            await Tone.start();
+            
+            // Generate Seed
+            seed = stringToSeed(text);
+            
+            // Update UI
+            document.getElementById('ui-container').style.opacity = 0;
+            setTimeout(() => document.getElementById('ui-container').style.display = 'none', 500);
+            
+            document.getElementById('playing-ui').style.opacity = 1;
+            document.getElementById('display-title').innerText = text;
+            
+            // Setup Instruments based on Style
+            setupSynth();
+            
+            // Start Generation
+            isPlaying = true;
+            generateMelody();
+        }
+
+        function resetSystem() {
+            isPlaying = false;
+            if(synth) synth.releaseAll();
+            if(loop) loop.stop();
+            Tone.Transport.stop();
+            
+            document.getElementById('ui-container').style.display = 'flex';
+            setTimeout(() => document.getElementById('ui-container').style.opacity = 1, 10);
+            document.getElementById('playing-ui').style.opacity = 0;
+        }
+
+        // --- MUSIC GENERATION (The "AI") ---
+
+        function setupSynth() {
+            if(synth) { synth.dispose(); }
+
+            // Instrument Design
+            if (currentStyle === 'CLASSICAL') {
+                synth = new Tone.PolySynth(Tone.Synth, {
+                    oscillator: { type: "triangle" },
+                    envelope: { attack: 0.05, decay: 0.2, sustain: 0.4, release: 1 }
+                }).toDestination();
+                Tone.Transport.bpm.value = 90 + Math.floor(seededRandom() * 40);
+                // Reverb
+                const reverb = new Tone.Reverb(2).toDestination();
+                synth.connect(reverb);
+            } 
+            else if (currentStyle === 'JAZZ') {
+                synth = new Tone.PolySynth(Tone.AMSynth).toDestination();
+                Tone.Transport.bpm.value = 80 + Math.floor(seededRandom() * 30);
+                const comp = new Tone.Compressor(-30, 3).toDestination();
+                synth.connect(comp);
+            } 
+            else { // CYBER
+                synth = new Tone.PolySynth(Tone.FMSynth).toDestination();
+                Tone.Transport.bpm.value = 110 + Math.floor(seededRandom() * 50);
+                const dist = new Tone.Distortion(0.4).toDestination();
+                synth.connect(dist);
+            }
+        }
+
+        function generateMelody() {
+            // Music Theory: Define Scale based on Seed
+            let root = "C4";
+            let scaleType = [];
+            
+            // Seed determines scale
+            if (seededRandom() > 0.5) { // Major
+                scaleType = [0, 2, 4, 5, 7, 9, 11, 12]; 
+                document.getElementById('display-key').innerText = "Major Scale";
+            } else { // Minor
+                scaleType = [0, 2, 3, 5, 7, 8, 10, 12];
+                document.getElementById('display-key').innerText = "Minor Scale";
+            }
+            
+            // Map steps to frequencies
+            let baseFreq = Tone.Frequency(root).toFrequency();
+            
+            document.getElementById('display-bpm').innerText = Math.floor(Tone.Transport.bpm.value);
+
+            loop = new Tone.Loop(time => {
+                // Markov Chain Simulation (AI)
+                // Play a note with 60% probability
+                if (seededRandom() > 0.3) {
+                    // Pick a note from scale
+                    let scaleDegree = Math.floor(seededRandom() * scaleType.length);
+                    let interval = scaleType[scaleDegree];
+                    let freq = baseFreq * Math.pow(2, interval / 12);
+                    
+                    // Random Duration
+                    let duration = seededRandom() > 0.7 ? "4n" : "8n";
+                    
+                    synth.triggerAttackRelease(freq, duration, time);
+                    
+                    // TRIGGER VISUALS (LO2/LO3 Integration)
+                    Tone.Draw.schedule(() => {
+                        spawnNote(scaleDegree, currentStyle);
+                    }, time);
+                }
+            }, "8n").start(0);
+
+            Tone.Transport.start();
+        }
+
+        // --- VISUALS (P5.js) ---
+
+        function drawScore() {
+            // Draw Staff Lines
+            strokeWeight(1);
+            for (let y of staffY) {
+                if (currentStyle === 'CYBER') {
+                    stroke(180, 100, 100, 0.3); // Neon Cyan
+                } else {
+                    stroke(255, 50); // Classic White
+                }
+                line(0, y, width, y);
+            }
+            
+            // Moving Playhead (Visual metronome)
+            let playheadX = (frameCount * 2) % width;
+            stroke(0, 0, 100, 0.2);
+            line(playheadX, staffY[0]-20, playheadX, staffY[4]+20);
+        }
+
+        function spawnNote(pitchIndex, style) {
+            // Map pitch to Y position on staff
+            // Higher pitch = Lower Y value (Higher visual)
+            let y = staffY[4] - (pitchIndex * 10); 
+            
+            notes.push(new NoteVisual(width, y, style, pitchIndex));
+        }
+
+        class NoteVisual {
+            constructor(x, y, style, pitch) {
+                this.pos = createVector(x, y);
+                this.vel = createVector(-3, 0); // Scroll left
+                this.style = style;
+                this.pitch = pitch;
+                this.life = 255;
+                this.size = 20;
+            }
+
+            update() {
+                this.pos.add(this.vel);
+                this.life -= 2;
+            }
+
+            display() {
+                noStroke();
+                
+                if (this.style === 'CLASSICAL') {
+                    // Gold/Ink blobs
+                    fill(45, 60, 100, this.life/255); // Gold HSB
+                    ellipse(this.pos.x, this.pos.y, this.size * 1.2, this.size);
+                    // Stem
+                    stroke(45, 60, 100, this.life/255);
+                    strokeWeight(2);
+                    line(this.pos.x + 8, this.pos.y, this.pos.x + 8, this.pos.y - 30);
+                } 
+                else if (this.style === 'JAZZ') {
+                    // Smoky, Purple circles
+                    fill(260, 60, 80, this.life/255 * 0.8);
+                    let wobble = sin(frameCount * 0.1) * 5;
+                    ellipse(this.pos.x, this.pos.y + wobble, this.size * 1.5);
+                } 
+                else { // CYBER
+                    // Neon Rectangles
+                    fill(180 + (this.pitch*10), 100, 100, this.life/255);
+                    rectMode(CENTER);
+                    rect(this.pos.x, this.pos.y, this.size * 2, 5);
+                    // Glitch effect
+                    if(random() > 0.8) {
+                        fill(255);
+                        rect(this.pos.x + random(-5,5), this.pos.y, this.size, 2);
+                    }
+                }
+            }
+
+            isDead() { return this.life < 0 || this.pos.x < 0; }
+        }
+
+        function windowResized() {
+            resizeCanvas(windowWidth, windowHeight);
+            staffY = [];
+            let centerY = height / 2;
+            for(let i=-2; i<=2; i++) {
+                staffY.push(centerY + i * 20);
+            }
+        }
+    </script>
+</body>
+</html>
