@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EconScholar Feed | 经济学前沿追踪</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js (用于处理数据逻辑，比原生JS更简洁) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Serif for reading) -->
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;1,300&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .serif { font-family: 'Merriweather', serif; }
+        .line-clamp-3 {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        [x-cloak] { display: none !important; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 h-screen flex overflow-hidden" x-data="rssApp()">
+
+    <!-- Login Modal (模拟登录) -->
+    <div x-show="!isLoggedIn" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/90 backdrop-blur-sm transition-opacity duration-300">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl w-96 text-center transform transition-all duration-300 scale-100">
+            <div class="mb-4 text-blue-600 text-4xl"><i class="fa-solid fa-layer-group"></i></div>
+            <h2 class="text-2xl font-bold mb-2 text-slate-800">EconScholar</h2>
+            <p class="text-slate-500 text-sm mb-6">经济学博士的专属文献流</p>
+            <input type="email" placeholder="Email (edu)" class="w-full p-3 mb-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <input type="password" placeholder="Password" class="w-full p-3 mb-6 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <button @click="login()" class="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition shadow-lg shadow-blue-500/30">
+                Sign In
+            </button>
+            <p class="mt-4 text-xs text-slate-400">模拟演示模式：点击任意登录</p>
+        </div>
+    </div>
+
+    <!-- 左侧侧边栏：源管理 -->
+    <aside class="w-72 bg-white border-r border-slate-200 flex flex-col z-10 hidden md:flex">
+        <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+            <span class="font-bold text-xl tracking-tight text-slate-800"><i class="fa-solid fa-rss text-blue-500 mr-2"></i>Feeds</span>
+            <div class="relative group">
+                <button class="text-slate-400 hover:text-blue-600"><i class="fa-solid fa-plus"></i></button>
+                <!-- Tooltip -->
+                <div class="absolute left-full ml-2 top-0 w-max bg-slate-800 text-white text-xs p-2 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition">Add RSS Source</div>
+            </div>
+        </div>
+
+        <nav class="flex-1 overflow-y-auto p-4 space-y-6">
+            <!-- Channel Group 1: Working Papers -->
+            <div>
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 px-2">Working Papers</h3>
+                <ul class="space-y-1">
+                    <template x-for="source in sources.filter(s => s.category === 'wp')">
+                        <li @click="filterSource(source.id)" 
+                            :class="{'bg-blue-50 text-blue-700': currentFilter === source.id, 'text-slate-600 hover:bg-slate-50': currentFilter !== source.id}"
+                            class="cursor-pointer px-3 py-2 rounded-lg text-sm font-medium transition flex justify-between items-center group">
+                            <span x-text="source.name"></span>
+                            <span class="text-xs bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded group-hover:bg-white" x-text="source.count">0</span>
+                        </li>
+                    </template>
+                </ul>
+            </div>
+
+            <!-- Channel Group 2: Top Journals -->
+            <div>
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 px-2">Top 5 Journals</h3>
+                <ul class="space-y-1">
+                    <template x-for="source in sources.filter(s => s.category === 'journal')">
+                        <li @click="filterSource(source.id)" 
+                            :class="{'bg-purple-50 text-purple-700': currentFilter === source.id, 'text-slate-600 hover:bg-slate-50': currentFilter !== source.id}"
+                            class="cursor-pointer px-3 py-2 rounded-lg text-sm font-medium transition flex justify-between items-center group">
+                            <span x-text="source.name"></span>
+                        </li>
+                    </template>
+                </ul>
+            </div>
+
+             <!-- Channel Group 3: Blogs/News -->
+             <div>
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 px-2">Expand Thinking</h3>
+                <ul class="space-y-1">
+                    <template x-for="source in sources.filter(s => s.category === 'blog')">
+                        <li @click="filterSource(source.id)" 
+                            :class="{'bg-emerald-50 text-emerald-700': currentFilter === source.id, 'text-slate-600 hover:bg-slate-50': currentFilter !== source.id}"
+                            class="cursor-pointer px-3 py-2 rounded-lg text-sm font-medium transition flex justify-between items-center group">
+                            <span x-text="source.name"></span>
+                        </li>
+                    </template>
+                </ul>
+            </div>
+        </nav>
+
+        <div class="p-4 border-t border-slate-100">
+            <button @click="isLoggedIn = false" class="flex items-center text-sm text-slate-500 hover:text-red-500 transition">
+                <img src="https://ui-avatars.com/api/?name=PhD+Student&background=0D8ABC&color=fff" class="w-8 h-8 rounded-full mr-3">
+                <div class="text-left">
+                    <div class="font-bold text-slate-700">PhD Candidate</div>
+                    <div class="text-xs">Log Out</div>
+                </div>
+            </button>
+        </div>
+    </aside>
+
+    <!-- 中间内容：Paper流 -->
+    <main class="flex-1 flex flex-col min-w-0 bg-slate-50 relative">
+        
+        <!-- Header -->
+        <header class="bg-white border-b border-slate-200 px-8 py-5 flex justify-between items-center shadow-sm z-20">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-800 serif" x-text="getHeaderTitle()"></h1>
+                <p class="text-sm text-slate-500 mt-1">
+                    <span x-text="articles.length"></span> papers fetched | Last updated: <span x-text="lastUpdated"></span>
+                </p>
+            </div>
+            <div class="flex gap-3">
+                <button @click="fetchFeeds()" class="p-2 text-slate-400 hover:text-blue-600 transition" title="Refresh">
+                    <i class="fa-solid fa-arrows-rotate" :class="{'animate-spin': loading}"></i>
+                </button>
+                <div class="relative">
+                    <input type="text" x-model="searchQuery" placeholder="Filter by keyword..." class="bg-slate-100 border-none rounded-full px-4 py-2 text-sm w-64 focus:ring-2 focus:ring-blue-200 outline-none transition">
+                    <i class="fa-solid fa-search absolute right-3 top-2.5 text-slate-400 text-xs"></i>
+                </div>
+            </div>
+        </header>
+
+        <!-- Loading State -->
+        <div x-show="loading" class="flex-1 flex items-center justify-center flex-col text-slate-400">
+            <i class="fa-solid fa-circle-notch fa-spin text-4xl mb-4 text-blue-500"></i>
+            <p>Fetching latest research data...</p>
+        </div>
+
+        <!-- Scrollable Feed Area -->
+        <div x-show="!loading" class="flex-1 overflow-y-auto p-6 md:px-12 md:py-8 space-y-6">
+            
+            <!-- Article Card Template -->
+            <template x-for="article in filteredArticles" :key="article.link">
+                <article class="bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition duration-300 overflow-hidden group">
+                    <div class="p-6">
+                        <div class="flex justify-between items-start mb-3">
+                            <span class="text-xs font-bold px-2 py-1 rounded bg-slate-100 text-slate-600 uppercase tracking-wide" x-text="article.sourceName"></span>
+                            <span class="text-xs text-slate-400 font-mono" x-text="formatDate(article.pubDate)"></span>
+                        </div>
+                        
+                        <a :href="article.link" target="_blank" class="block group-hover:text-blue-700 transition">
+                            <h2 class="text-xl font-bold text-slate-800 mb-2 serif leading-tight" x-html="article.title"></h2>
+                        </a>
+
+                        <!-- 作者 (RSS通常不直接提供干净的作者字段，这里模拟展示) -->
+                        <div class="text-sm text-slate-500 mb-4 italic" x-show="article.author" x-text="'By ' + article.author"></div>
+                        
+                        <!-- 摘要 -->
+                        <div class="text-slate-600 text-sm leading-relaxed mb-4 line-clamp-3" x-html="stripHtml(article.description)"></div>
+
+                        <!-- Actions -->
+                        <div class="flex items-center justify-between pt-4 border-t border-slate-50 mt-4">
+                            <div class="flex gap-4">
+                                <button @click="toggleSave(article)" class="text-slate-400 hover:text-yellow-500 text-sm flex items-center gap-1 transition">
+                                    <i :class="article.saved ? 'fa-solid fa-bookmark text-yellow-500' : 'fa-regular fa-bookmark'"></i> 
+                                    <span x-text="article.saved ? 'Saved' : 'Save'"></span>
+                                </button>
+                                <button @click="emailPaper(article)" class="text-slate-400 hover:text-blue-500 text-sm flex items-center gap-1 transition">
+                                    <i class="fa-regular fa-envelope"></i> Email Me
+                                </button>
+                            </div>
+                            <a :href="article.link" target="_blank" class="text-blue-600 font-medium text-sm hover:underline">Read Paper <i class="fa-solid fa-arrow-right text-xs ml-1"></i></a>
+                        </div>
+                    </div>
+                </article>
+            </template>
+            
+            <!-- Empty State -->
+            <div x-show="filteredArticles.length === 0" class="text-center py-20 text-slate-400">
+                <i class="fa-solid fa-wind text-4xl mb-4"></i>
+                <p>No papers found matching your criteria.</p>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- 逻辑脚本 -->
+    <script>
+        function rssApp() {
+            return {
+                isLoggedIn: false,
+                loading: true,
+                currentFilter: 'all',
+                searchQuery: '',
+                lastUpdated: '',
+                articles: [],
+                
+                // 核心：这里定义了经济学博士关注的RSS源
+                // 注意：使用 rss2json API 将 RSS XML 转换为 JSON，以便 JS 读取
+                sources: [
+                    { id: 'nber', name: 'NBER Working Papers', category: 'wp', url: 'https://www.nber.org/rss/new.xml', count: 0 },
+                    { id: 'voxeu', name: 'VoxEU (CEPR)', category: 'blog', url: 'https://voxeu.org/feed/rss/all', count: 0 },
+                    { id: 'marginal', name: 'Marginal Revolution', category: 'blog', url: 'https://feeds.feedburner.com/marginalrevolution/feed', count: 0 },
+                    // 由于Top 5期刊的RSS经常有防火墙，这里用模拟数据填充策略演示，如果API失败会显示模拟数据
+                    { id: 'aer', name: 'Amer. Econ. Review', category: 'journal', url: 'https://www.aeaweb.org/research/feed', count: 0 }, 
+                    { id: 'qje', name: 'QJE (Oxford)', category: 'journal', url: '', count: 0 } // QJE RSS usually blocks CORS, placeholder
+                ],
+
+                login() {
+                    this.isLoggedIn = true;
+                    this.fetchFeeds();
+                },
+
+                async fetchFeeds() {
+                    this.loading = true;
+                    this.articles = [];
+                    const apiKey = 'rss_url'; // 使用 rss2json 的公共端点
+                    
+                    // 并行获取所有源
+                    const promises = this.sources.filter(s => s.url !== '').map(source => {
+                        return fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(source.url)}`)
+                            .then(res => res.json())
+                            .then(data => {
+                                if(data.status === 'ok') {
+                                    const items = data.items.map(item => ({
+                                        ...item,
+                                        sourceId: source.id,
+                                        sourceName: source.name,
+                                        saved: false,
+                                        pubDate: new Date(item.pubDate.replace(/-/g, "/")) // Fix safari date parsing
+                                    }));
+                                    source.count = items.length; // 更新计数
+                                    return items;
+                                }
+                                return [];
+                            })
+                            .catch(err => {
+                                console.log('Fetch error:', err);
+                                return [];
+                            });
+                    });
+
+                    const results = await Promise.all(promises);
+                    // 合并所有结果
+                    this.articles = results.flat().sort((a, b) => b.pubDate - a.pubDate);
+                    
+                    // 如果没有抓取到数据（可能是API限制），生成一些模拟数据以供演示
+                    if (this.articles.length < 2) {
+                        this.addMockData();
+                    }
+
+                    this.lastUpdated = new Date().toLocaleTimeString();
+                    this.loading = false;
+                },
+
+                // 模拟数据，保证界面永远不为空，提升体验
+                addMockData() {
+                    const mocks = [
+                        { title: "Monetary Policy in a High Inflation Environment", author: "J. Powell et al.", pubDate: new Date(), sourceId: 'nber', sourceName: 'NBER Working Papers', link: '#', description: "This paper analyzes the effects of rapid rate hikes on labor markets using new micro-level data...", saved: false },
+                        { title: "The Elasticity of Intertemporal Substitution", author: "X. Gabaix", pubDate: new Date(Date.now() - 86400000), sourceId: 'aer', sourceName: 'Amer. Econ. Review', link: '#', description: "We provide new estimates of EIS using a natural experiment involving consumption tax changes...", saved: false },
+                        { title: "Why AI Will Transform Economic Modeling", author: "T. Cowen", pubDate: new Date(Date.now() - 100000000), sourceId: 'marginal', sourceName: 'Marginal Revolution', link: '#', description: "It's not just about automation, it's about how we construct counterfactuals...", saved: false },
+                    ];
+                    this.articles = [...this.articles, ...mocks];
+                },
+
+                get filteredArticles() {
+                    let result = this.articles;
+                    
+                    // 1. Filter by Source
+                    if (this.currentFilter !== 'all') {
+                        result = result.filter(a => a.sourceId === this.currentFilter);
+                    }
+
+                    // 2. Filter by Search
+                    if (this.searchQuery) {
+                        const lower = this.searchQuery.toLowerCase();
+                        result = result.filter(a => 
+                            a.title.toLowerCase().includes(lower) || 
+                            (a.description && a.description.toLowerCase().includes(lower))
+                        );
+                    }
+                    return result;
+                },
+
+                filterSource(id) {
+                    this.currentFilter = this.currentFilter === id ? 'all' : id;
+                },
+
+                getHeaderTitle() {
+                    if (this.currentFilter === 'all') return 'Latest Research Stream';
+                    const source = this.sources.find(s => s.id === this.currentFilter);
+                    return source ? source.name : 'Stream';
+                },
+
+                formatDate(dateObj) {
+                    if(!dateObj) return '';
+                    const now = new Date();
+                    const diff = (now - dateObj) / (1000 * 60 * 60); // hours
+                    if (diff < 24) return Math.floor(diff) + 'h ago';
+                    return dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                },
+
+                stripHtml(html) {
+                    if (!html) return '';
+                    let tmp = document.createElement("DIV");
+                    tmp.innerHTML = html;
+                    return tmp.textContent || tmp.innerText || "";
+                },
+
+                toggleSave(article) {
+                    article.saved = !article.saved;
+                },
+
+                // ✨ 核心功能：模拟推送到邮箱
+                // 这会唤起用户本地的邮件客户端
+                emailPaper(article) {
+                    const subject = `[Read Later] ${article.title}`;
+                    const body = `Title: ${article.title}\n\nSource: ${article.sourceName}\n\nLink: ${article.link}\n\nSaved from EconScholar Dashboard.`;
+                    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                }
+            }
+        }
+    </script>
+</body>
+</html>
