@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 猫猫法庭 | DeepSeek 强力驱动</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Markdown 解析库，用于渲染 AI 的回复 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: #FFF0F3;
+            background-image: radial-gradient(#FFC4D6 2px, transparent 2px);
+            background-size: 24px 24px;
+        }
+        .cute-font { font-family: 'ZCOOL KuaiLe', cursive; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(12px);
+            box-shadow: 0 20px 40px -5px rgba(255, 107, 129, 0.2);
+            border: 4px solid #FFF;
+        }
+        .input-group { transition: all 0.3s ease; }
+        .input-group:focus-within { transform: scale(1.01); border-color: #F472B6; box-shadow: 0 0 15px rgba(244, 114, 182, 0.2); }
+        
+        /* 隐藏滚动条 */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* 动画类 */
+        .pop-enter { animation: popEnter 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        @keyframes popEnter { from { opacity: 0; transform: scale(0.9) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        
+        .cat-thinking { animation: float 3s ease-in-out infinite; }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <!-- 主容器 -->
+    <div class="w-full max-w-5xl glass-panel rounded-[3rem] relative min-h-[700px] flex flex-col overflow-hidden pop-enter">
+        
+        <!-- 顶部导航栏 -->
+        <header class="bg-gradient-to-r from-pink-100 to-rose-100 p-5 flex items-center justify-between px-8 border-b border-pink-200 z-50">
+            <button onclick="goBack()" id="btn-back" class="hidden text-pink-500 hover:bg-white/50 px-4 py-2 rounded-full font-bold transition">
+                <i class="fa-solid fa-arrow-left mr-2"></i>返回修改
+            </button>
+            <div class="flex-1 text-center">
+                <h1 class="text-3xl text-pink-600 cute-font tracking-widest drop-shadow-sm">
+                    <i class="fa-solid fa-cat mr-2"></i>AI 猫猫法庭
+                </h1>
+                <p class="text-xs text-pink-400 font-bold tracking-wide">DeepSeek V3 智慧加持</p>
+            </div>
+            <button onclick="toggleSettings()" class="text-pink-400 hover:text-pink-600 transition">
+                <i class="fa-solid fa-gear text-xl"></i>
+            </button>
+        </header>
+
+        <!-- API 设置面板 (隐藏) -->
+        <div id="settings-panel" class="hidden absolute top-20 right-8 z-50 bg-white p-4 rounded-2xl shadow-xl border border-pink-100 w-80">
+            <h3 class="text-sm font-bold text-gray-600 mb-2">API 设置</h3>
+            <input type="password" id="api-key-input" class="w-full bg-gray-50 border rounded-lg p-2 text-xs mb-2 outline-none focus:ring-2 ring-pink-300" placeholder="输入 DeepSeek API Key">
+            <div class="flex justify-between items-center">
+                <span class="text-xs text-gray-400">默认已预填测试Key</span>
+                <button onclick="saveSettings()" class="bg-pink-500 text-white px-3 py-1 rounded-lg text-xs">保存</button>
+            </div>
+        </div>
+
+        <main class="flex-1 relative overflow-hidden">
+            
+            <!-- 1. 首页 Landing -->
+            <div id="view-landing" class="h-full flex flex-col items-center justify-center text-center p-8 space-y-8 absolute inset-0 transition-transform duration-500">
+                <div class="relative group">
+                    <div class="absolute -inset-4 bg-gradient-to-tr from-pink-300 to-purple-300 rounded-full blur-lg opacity-40 group-hover:opacity-70 transition duration-700 animate-pulse"></div>
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=JudgeKitty&backgroundColor=ffdfbf&clothing=collar&eyes=happy&mouth=smile&top=hat" 
+                         alt="Cat Judge" 
+                         class="relative w-56 h-56 drop-shadow-2xl hover:-rotate-6 transition-transform duration-300">
+                    <div class="absolute -bottom-6 right-0 bg-white text-pink-600 px-4 py-2 rounded-full text-sm font-bold shadow-lg border-2 border-pink-100 transform rotate-12">
+                        本喵只说真话！
+                    </div>
+                </div>
+                
+                <div class="space-y-4 max-w-xl">
+                    <h2 class="text-4xl cute-font text-gray-800">情侣吵架？让 AI 来判！</h2>
+                    <p class="text-gray-500 text-lg">别再争谁对谁错了，把“客观事实”和“主观委屈”都交给我。<br>DeepSeek 大脑将为您进行 <span class="text-pink-500 font-bold">100% 公正又扎心</span> 的裁决。</p>
+                </div>
+
+                <button onclick="switchView('view-form')" class="px-12 py-5 bg-gradient-to-r from-pink-500 to-rose-500 rounded-2xl text-white font-bold text-2xl shadow-xl shadow-pink-200 hover:shadow-pink-400 hover:-translate-y-1 transition-all active:scale-95">
+                    <i class="fa-solid fa-gavel mr-3"></i>升堂！
+                </button>
+            </div>
+
+            <!-- 2. 案情录入 Form -->
+            <div id="view-form" class="h-full flex flex-col p-6 absolute inset-0 translate-x-full transition-transform duration-500 bg-white/50 overflow-y-auto no-scrollbar">
+                <!-- 预设案例按钮 -->
+                <div class="flex justify-center gap-3 mb-6 flex-wrap">
+                    <button onclick="fillCase('snack')" class="bg-orange-100 text-orange-600 px-4 py-2 rounded-full text-sm font-bold hover:bg-orange-200 transition">🍬 偷吃零食案</button>
+                    <button onclick="fillCase('photo')" class="bg-blue-100 text-blue-600 px-4 py-2 rounded-full text-sm font-bold hover:bg-blue-200 transition">📸 拍照太丑案</button>
+                    <button onclick="fillCase('msg')" class="bg-purple-100 text-purple-600 px-4 py-2 rounded-full text-sm font-bold hover:bg-purple-200 transition">💬 回消息慢案</button>
+                </div>
+
+                <div class="flex flex-col md:flex-row gap-6 pb-24">
+                    <!-- Jimmy Side -->
+                    <div class="flex-1 bg-white rounded-3xl p-6 border-2 border-blue-100 shadow-sm input-group relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-20 h-20 bg-blue-50 rounded-bl-full -mr-4 -mt-4 z-0"></div>
+                        <div class="relative z-10">
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-10 h-10 bg-blue-500 text-white rounded-xl flex items-center justify-center font-bold text-lg">J</div>
+                                <input id="name-male" type="text" value="Jimmy" class="text-xl font-bold text-gray-700 bg-transparent outline-none w-full border-b-2 border-transparent focus:border-blue-300 transition" placeholder="男生名字">
+                            </div>
+                            
+                            <label class="block text-xs font-bold text-blue-400 uppercase mb-2">🤔 发生了什么？(客观事实)</label>
+                            <textarea id="fact-male" class="w-full h-24 p-3 bg-blue-50/50 rounded-xl text-sm text-gray-600 outline-none resize-none mb-4 focus:bg-white border border-transparent focus:border-blue-200 transition" placeholder="例如：我买了一杯奶茶自己喝了..."></textarea>
+                            
+                            <label class="block text-xs font-bold text-blue-400 uppercase mb-2">😭 你的委屈点？(主观感受)</label>
+                            <textarea id="feel-male" class="w-full h-24 p-3 bg-blue-50/50 rounded-xl text-sm text-gray-600 outline-none resize-none focus:bg-white border border-transparent focus:border-blue-200 transition" placeholder="例如：我觉得她平时也不爱喝这个，而且我太渴了..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Linda Side -->
+                    <div class="flex-1 bg-white rounded-3xl p-6 border-2 border-pink-100 shadow-sm input-group relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-20 h-20 bg-pink-50 rounded-bl-full -mr-4 -mt-4 z-0"></div>
+                        <div class="relative z-10">
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-10 h-10 bg-pink-500 text-white rounded-xl flex items-center justify-center font-bold text-lg">L</div>
+                                <input id="name-female" type="text" value="Linda" class="text-xl font-bold text-gray-700 bg-transparent outline-none w-full border-b-2 border-transparent focus:border-pink-300 transition" placeholder="女生名字">
+                            </div>
+                            
+                            <label class="block text-xs font-bold text-pink-400 uppercase mb-2">🤔 发生了什么？(客观事实)</label>
+                            <textarea id="fact-female" class="w-full h-24 p-3 bg-pink-50/50 rounded-xl text-sm text-gray-600 outline-none resize-none mb-4 focus:bg-white border border-transparent focus:border-pink-200 transition" placeholder="例如：看到他自己喝奶茶，问都没问我..."></textarea>
+                            
+                            <label class="block text-xs font-bold text-pink-400 uppercase mb-2">😭 你的委屈点？(主观感受)</label>
+                            <textarea id="feel-female" class="w-full h-24 p-3 bg-pink-50/50 rounded-xl text-sm text-gray-600 outline-none resize-none focus:bg-white border border-transparent focus:border-pink-200 transition" placeholder="例如：不在乎奶茶，在乎的是他心里有没有我！"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="absolute bottom-8 left-0 right-0 flex justify-center z-20">
+                    <button onclick="submitToAI()" class="group relative px-10 py-4 bg-gray-900 text-white rounded-full font-bold shadow-2xl hover:scale-105 transition-all overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 opacity-0 group-hover:opacity-100 transition duration-500"></div>
+                        <span class="relative flex items-center gap-2">
+                            请求 AI 猫猫判决 <i class="fa-solid fa-paper-plane"></i>
+                        </span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3. AI 思考中 Loading -->
+            <div id="view-loading" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm z-50">
+                <div class="cat-thinking mb-8">
+                    <img src="https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif" class="w-40 h-40 rounded-full border-8 border-pink-100 shadow-xl object-cover">
+                </div>
+                <h3 class="text-2xl cute-font text-gray-800 mb-2" id="loading-text">正在连接 DeepSeek 星球...</h3>
+                <div class="w-64 h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div class="h-full bg-pink-500 animate-progress" style="width: 50%"></div>
+                </div>
+                <p class="text-xs text-gray-400 mt-4 font-mono" id="ai-log">> 初始化神经网络...</p>
+                <style>@keyframes animate-progress { 0% { width: 0; } 50% { width: 70%; } 100% { width: 100%; } }</style>
+            </div>
+
+            <!-- 4. 判决结果 Result -->
+            <div id="view-result" class="h-full flex flex-col p-6 absolute inset-0 translate-x-full transition-transform duration-500 bg-white/60 overflow-y-auto no-scrollbar">
+                
+                <!-- 案件标题 -->
+                <div class="text-center mb-6">
+                    <span class="bg-pink-100 text-pink-600 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest">Case Closed</span>
+                    <h2 id="result-title" class="text-3xl cute-font text-gray-800 mt-2">案件标题加载中...</h2>
+                </div>
+
+                <!-- 责任比例条 -->
+                <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-white mb-6">
+                    <div class="flex justify-between text-xs font-bold text-gray-400 mb-2 uppercase">
+                        <span id="label-male">Jimmy</span>
+                        <span>锅是谁的？</span>
+                        <span id="label-female">Linda</span>
+                    </div>
+                    <div class="relative h-12 w-full bg-gray-100 rounded-full overflow-hidden flex font-bold text-white text-lg shadow-inner">
+                        <div id="bar-male" class="bg-blue-400 flex items-center justify-center transition-all duration-1000" style="width: 50%">50%</div>
+                        <div id="bar-female" class="bg-pink-400 flex items-center justify-center transition-all duration-1000" style="width: 50%">50%</div>
+                        <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-full w-10 h-10 flex items-center justify-center text-yellow-500 shadow-sm border-2 border-gray-50 z-10">
+                            <i class="fa-solid fa-bolt"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI 分析内容 -->
+                <div class="grid md:grid-cols-2 gap-4 mb-6">
+                    <!-- 深度分析 -->
+                    <div class="bg-white/80 p-5 rounded-2xl border border-pink-50 shadow-sm">
+                        <h3 class="flex items-center gap-2 text-pink-600 font-bold mb-3">
+                            <i class="fa-solid fa-microscope"></i> 猫眼透视 (深度分析)
+                        </h3>
+                        <div id="result-analysis" class="text-sm text-gray-600 leading-relaxed text-justify markdown-body">
+                            <!-- AI 内容填入处 -->
+                        </div>
+                    </div>
+
+                    <!-- 强制执行 -->
+                    <div class="bg-yellow-50/80 p-5 rounded-2xl border border-yellow-100 shadow-sm">
+                        <h3 class="flex items-center gap-2 text-yellow-700 font-bold mb-3">
+                            <i class="fa-solid fa-clipboard-list"></i> 强制和解清单
+                        </h3>
+                        <ul id="result-tasks" class="space-y-3">
+                            <!-- AI 任务填入处 -->
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- 底部按钮 -->
+                <div class="flex justify-center pb-8">
+                    <button onclick="switchView('view-restore')" class="px-8 py-3 bg-pink-500 text-white rounded-full font-bold shadow-lg hover:bg-pink-600 transition hover:-translate-y-1">
+                        去执行任务并和好 <i class="fa-solid fa-heart ml-2"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 5. 感情修复 (温度计) -->
+            <div id="view-restore" class="h-full flex flex-col items-center justify-center p-6 absolute inset-0 translate-x-full transition-transform duration-500 bg-white/90">
+                <h2 class="text-3xl cute-font text-gray-800 mb-2">💖 爱情回温仪</h2>
+                <p class="text-gray-400 text-sm mb-8">别生气了，给个台阶下吧！</p>
+
+                <div class="relative w-24 h-80 bg-gray-200 rounded-full border-4 border-white shadow-inner flex flex-col justify-end overflow-hidden mb-8">
+                    <div id="liquid" class="w-full bg-blue-400 transition-all duration-700 relative" style="height: 30%">
+                        <div class="absolute w-full h-full opacity-30 bg-white animate-pulse"></div>
+                    </div>
+                    <!-- 刻度 -->
+                    <div class="absolute top-1/4 w-full h-0.5 bg-gray-300 opacity-50"></div>
+                    <div class="absolute top-2/4 w-full h-0.5 bg-gray-300 opacity-50"></div>
+                    <div class="absolute top-3/4 w-full h-0.5 bg-gray-300 opacity-50"></div>
+                </div>
+
+                <div id="temp-val" class="text-5xl font-black text-blue-400 cute-font mb-6 transition-colors">30°C</div>
+
+                <div class="flex gap-4">
+                    <button onclick="addHeat(20)" class="bg-white border-2 border-pink-100 px-4 py-2 rounded-xl hover:bg-pink-50 transition active:scale-95 shadow-sm">
+                        🤝 握手言和
+                    </button>
+                    <button onclick="addHeat(30)" class="bg-white border-2 border-pink-100 px-4 py-2 rounded-xl hover:bg-pink-50 transition active:scale-95 shadow-sm">
+                        🫂 抱抱30秒
+                    </button>
+                    <button onclick="addHeat(40)" class="bg-white border-2 border-pink-100 px-4 py-2 rounded-xl hover:bg-pink-50 transition active:scale-95 shadow-sm">
+                        😘 亲亲一下
+                    </button>
+                </div>
+                
+                <button onclick="resetApp()" class="mt-12 text-gray-400 hover:text-pink-500 text-sm underline">再判一个案子</button>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- 核心逻辑脚本 -->
+    <script>
+        // === 全局配置 ===
+        // 为了演示方便，预填了您提供的Key。
+        // 在实际生产环境中，请不要将Key直接暴露在前端代码中。
+        let DEEPSEEK_API_KEY = "sk-9bc8bb993b684218803e58cdeac07d12"; 
+        const API_URL = "https://api.deepseek.com/chat/completions";
+
+        // === 界面导航逻辑 ===
+        const views = ['view-landing', 'view-form', 'view-result', 'view-restore'];
+        let currentViewIndex = 0;
+
+        function switchView(viewId) {
+            const landing = document.getElementById('view-landing');
+            const form = document.getElementById('view-form');
+            const result = document.getElementById('view-result');
+            const restore = document.getElementById('view-restore');
+            const btnBack = document.getElementById('btn-back');
+
+            // 简单的路由逻辑
+            if(viewId === 'view-landing') {
+                landing.style.transform = 'translateX(0)';
+                form.style.transform = 'translateX(100%)';
+                result.style.transform = 'translateX(100%)';
+                restore.style.transform = 'translateX(100%)';
+                btnBack.classList.add('hidden');
+            } else if (viewId === 'view-form') {
+                landing.style.transform = 'translateX(-100%)';
+                form.style.transform = 'translateX(0)';
+                result.style.transform = 'translateX(100%)';
+                restore.style.transform = 'translateX(100%)';
+                btnBack.classList.remove('hidden');
+            } else if (viewId === 'view-result') {
+                result.style.transform = 'translateX(0)';
+                restore.style.transform = 'translateX(100%)';
+            } else if (viewId === 'view-restore') {
+                restore.style.transform = 'translateX(0)';
+            }
+        }
+
+        function goBack() {
+            switchView('view-landing');
+        }
+        
+        function resetApp() {
+            document.getElementById('liquid').style.height = '30%';
+            currentHeat = 30;
+            switchView('view-form');
+        }
+
+        // === 预设案例 ===
+        const presets = {
+            snack: { j_fact: "我买了一包薯片自己吃完了。", j_feel: "我当时太饿了，而且平时我也给她买很多。", l_fact: "他吃独食，问都没问我。", l_feel: "不在乎薯片，在乎的是被忽略的感觉。" },
+            photo: { j_fact: "她让我拍照，我拍了50张，她都说丑。", j_feel: "我觉得很真实啊，光线也刚好，她非要修图那样的。", l_fact: "把我拍得像一米五，全是双下巴。", l_feel: "他根本不用心，敷衍了事。" },
+            msg:   { j_fact: "我在打游戏团战，没回微信。", j_feel: "那是排位晋级赛啊！我就晚回了10分钟。", l_fact: "失踪了两小时，发消息不回。", l_feel: "手机就在旁边为什么不看？是不是不爱了？" }
+        };
+
+        function fillCase(type) {
+            const p = presets[type];
+            document.getElementById('fact-male').value = p.j_fact;
+            document.getElementById('feel-male').value = p.j_feel;
+            document.getElementById('fact-female').value = p.l_fact;
+            document.getElementById('feel-female').value = p.l_feel;
+        }
+
+        // === AI 核心交互逻辑 ===
+        async function submitToAI() {
+            const nameM = document.getElementById('name-male').value || "Jimmy";
+            const nameF = document.getElementById('name-female').value || "Linda";
+            
+            const factM = document.getElementById('fact-male').value;
+            const feelM = document.getElementById('feel-male').value;
+            const factF = document.getElementById('fact-female').value;
+            const feelF = document.getElementById('feel-female').value;
+
+            if((!factM && !feelM) || (!factF && !feelF)) {
+                alert("请至少填写一些内容，猫猫无法审判空气！🐱");
+                return;
+            }
+
+            // 显示 Loading
+            document.getElementById('view-loading').classList.remove('hidden');
+            const logEl = document.getElementById('ai-log');
+            
+            // 构建 Prompt
+            const systemPrompt = `你是一只名叫“猫猫大法官”的AI，负责调解情侣吵架。你的性格是：可爱、幽默、一针见血、稍微有点毒舌但心地善良。
+            
+            请分析以下情侣的争吵内容：
+            男方 (${nameM})：
+            - 事实：${factM}
+            - 委屈：${feelM}
+            
+            女方 (${nameF})：
+            - 事实：${factF}
+            - 委屈：${feelF}
+
+            请以 JSON 格式返回结果，包含以下字段：
+            1. "title": 一个好笑的案件标题（如“薯片独食引发的血案”）。
+            2. "score_male": 男方责任百分比（整数）。
+            3. "score_female": 女方责任百分比（整数，两者相加100）。
+            4. "analysis": 一段深度的分析，分析双方的心理，指出逻辑漏洞，用幽默的口吻。
+            5. "tasks": 一个数组，包含3个具体的、好玩的和解任务（如“给对方按摩5分钟”）。
+            
+            只返回纯 JSON 字符串，不要Markdown格式。`;
+
+            try {
+                logEl.innerText = "> 正在加密发送至 DeepSeek...";
+                
+                const response = await fetch(API_URL, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${DEEPSEEK_API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: "deepseek-chat",
+                        messages: [
+                            {"role": "system", "content": "You are a helpful assistant that outputs JSON."},
+                            {"role": "user", "content": systemPrompt}
+                        ],
+                        stream: false
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status}`);
+                }
+
+                logEl.innerText = "> 接收喵星信号中...";
+                const data = await response.json();
+                
+                // 解析内容
+                let content = data.choices[0].message.content;
+                // 清理可能存在的 markdown 代码块标记
+                content = content.replace(/```json/g, "").replace(/```/g, "").trim();
+                
+                const result = JSON.parse(content);
+                renderResult(result, nameM, nameF);
+
+            } catch (error) {
+                console.error(error);
+                logEl.innerText = "> 网络拥堵，启用备用猫粮...";
+                // 降级策略：如果 API 失败，使用本地随机生成
+                setTimeout(() => {
+                    useOfflineFallback(nameM, nameF);
+                }, 1500);
+            }
+        }
+
+        function renderResult(data, nameM, nameF) {
+            // 隐藏 Loading
+            document.getElementById('view-loading').classList.add('hidden');
+            
+            // 填充数据
+            document.getElementById('result-title').innerText = data.title;
+            document.getElementById('label-male').innerText = nameM;
+            document.getElementById('label-female').innerText = nameF;
+            
+            // 进度条动画
+            setTimeout(() => {
+                document.getElementById('bar-male').style.width = data.score_male + "%";
+                document.getElementById('bar-male').innerText = data.score_male + "%";
+                document.getElementById('bar-female').style.width = data.score_female + "%";
+                document.getElementById('bar-female').innerText = data.score_female + "%";
+            }, 100);
+
+            // 渲染 Markdown 分析
+            document.getElementById('result-analysis').innerHTML = marked.parse(data.analysis);
+
+            // 渲染任务列表
+            const tasksHtml = data.tasks.map((task, i) => `
+                <li class="flex items-start gap-3 bg-white p-3 rounded-xl border border-yellow-200">
+                    <span class="bg-yellow-400 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">${i+1}</span>
+                    <span class="text-gray-700 text-sm">${task}</span>
+                </li>
+            `).join('');
+            document.getElementById('result-tasks').innerHTML = tasksHtml;
+
+            // 切换视图
+            switchView('view-result');
+        }
+
+        // === 离线降级逻辑 (API 挂了也能用) ===
+        function useOfflineFallback(nameM, nameF) {
+            const mockData = {
+                title: "神秘的通讯故障案",
+                score_male: 60,
+                score_female: 40,
+                analysis: "虽然本喵连接 DeepSeek 星球失败（可能是被外星人劫持了），但凭借本官的直觉：男方逻辑太直，女方心思太细。一个在讲道理，一个在讲态度，这根本就是跨服聊天嘛！",
+                tasks: [
+                    `${nameM} 必须立刻夸 ${nameF} 三句，不准重复。`,
+                    "双方互相捏脸 10 秒钟。",
+                    "一起去吃顿好的，这顿谁错谁请客（建议AA）。"
+                ]
+            };
+            renderResult(mockData, nameM, nameF);
+        }
+
+        // === 温度计逻辑 ===
+        let currentHeat = 30;
+        function addHeat(val) {
+            currentHeat += val;
+            if(currentHeat > 100) currentHeat = 100;
+
+            const liquid = document.getElementById('liquid');
+            const tempVal = document.getElementById('temp-val');
+
+            liquid.style.height = currentHeat + "%";
+            tempVal.innerText = currentHeat + "°C";
+
+            if(currentHeat < 50) {
+                liquid.className = "w-full bg-blue-400 transition-all duration-700 relative";
+                tempVal.className = "text-5xl font-black text-blue-400 cute-font mb-6 transition-colors";
+            } else if (currentHeat < 90) {
+                liquid.className = "w-full bg-pink-400 transition-all duration-700 relative";
+                tempVal.className = "text-5xl font-black text-pink-400 cute-font mb-6 transition-colors";
+            } else {
+                liquid.className = "w-full bg-red-500 transition-all duration-700 relative";
+                tempVal.className = "text-5xl font-black text-red-500 cute-font mb-6 transition-colors animate-bounce";
+                triggerConfetti();
+            }
+        }
+
+        function triggerConfetti() {
+            confetti({
+                particleCount: 150,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: ['#F472B6', '#FBBF24', '#60A5FA']
+            });
+        }
+
+        // === 设置面板 ===
+        function toggleSettings() {
+            document.getElementById('settings-panel').classList.toggle('hidden');
+        }
+        
+        // 初始化 Key
+        document.getElementById('api-key-input').value = DEEPSEEK_API_KEY;
+
+        function saveSettings() {
+            const newKey = document.getElementById('api-key-input').value;
+            if(newKey) {
+                DEEPSEEK_API_KEY = newKey;
+                alert("API Key 已更新！");
+                toggleSettings();
+            }
+        }
+    </script>
+</body>
+</html>
